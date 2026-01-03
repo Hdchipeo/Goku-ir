@@ -1,0 +1,13 @@
+[0;33m--- esp-idf-monitor 1.8.0 on /dev/cu.usbmodem21201 115200[0m
+[0;33m--- Quit: Ctrl+] | Menu: Ctrl+T | Help: Ctrl+T followed by Ctrl+H[0m
+[0m--- 0x40056f60: [0;33mmemcpy[0m[0m in [0;32mROM[0m
+[0m--- 0x420615a7: [0;33mesp_http_client_open[0m[0m at [0;32m/Users/dangminhtam/esp/esp-idf/components/esp_http_client/esp_http_client.c[0m[0m:[1;31m1691[0m
+[0m--- 0x400570e8: [0;33mmemset[0m[0m in [0;32mROM[0m
+[0m--- 0x400570f3: [0;33mmemset[0m[0m in [0;32mROM[0m
+[0m--- 0x420615a4: [0;33mesp_http_client_open[0m[0m at [0;32m/Users/dangminhtam/esp/esp-idf/components/esp_http_client/esp_http_client.c[0m[0m:[1;31m1690[0m
+[0m--- 0x4200f79d: [0;33mauto_update_task[0m[0m at [0;32m/Users/dangminhtam/Project-storage/My-Project/Goku-ir-device/main/app_ota.c[0m[0m:[1;31m93[0m
+[0m--- 0x4037f641: [0;33mvPortTaskWrapper[0m[0m at [0;32m/Users/dangminhtam/esp/esp-idf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c[0m[0m:[1;31m139[0m
+[0m--- 0x40375d18: [0;33mesp_restart_noos[0m[0m at [0;32m/Users/dangminhtam/esp/esp-idf/components/esp_system/port/soc/esp32s3/system_internal.c[0m[0m:[1;31m162[0m
+[1;31m--- Error: read failed: [Errno 6] Device not configured[0m
+[0;33m--- Waiting for the device to reconnect[0m[0;33m[0m
+[0m

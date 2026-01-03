@@ -1,0 +1,148 @@
+ESP-ROM:esp32s3-20210327
+Build:Mar 27 2021
+rst:0x15 (USB_UART_CHIP_RESET),boot:0x2a (SPI_FAST_FLASH_BOOT)
+Saved PC:0x40048df3
+SPIWP:0xee
+mode:DIO, clock div:1
+load:0x3fce2810,len:0x1564
+load:0x403c8700,len:0x4
+load:0x403c8704,len:0xd24
+load:0x403cb700,len:0x2ed4
+entry 0x403c8928
+[0;32mI (26) boot: ESP-IDF v5.4.2-610-g1bfe1595fa-dirty 2nd stage bootloader[0m
+[0;32mI (27) boot: compile time Jan  3 2026 22:45:44[0m
+[0;32mI (27) boot: Multicore bootloader[0m
+[0;32mI (29) boot: chip revision: v0.1[0m
+[0;32mI (32) boot: efuse block revision: v1.3[0m
+[0;32mI (35) boot.esp32s3: Boot SPI Speed : 80MHz[0m
+[0;32mI (39) boot.esp32s3: SPI Mode       : DIO[0m
+[0;32mI (43) boot.esp32s3: SPI Flash Size : 4MB[0m
+[0;32mI (47) boot: Enabling RNG early entropy source...[0m
+[0;32mI (51) boot: Partition Table:[0m
+[0;32mI (54) boot: ## Label            Usage          Type ST Offset   Length[0m
+[0;32mI (60) boot:  0 nvs              WiFi data        01 02 00009000 00004000[0m
+[0;32mI (67) boot:  1 fctry            WiFi data        01 02 0000d000 00004000[0m
+[0;32mI (73) boot:  2 otadata          OTA data         01 00 00011000 00002000[0m
+[0;32mI (80) boot:  3 phy_init         RF data          01 01 00013000 00001000[0m
+[0;32mI (86) boot:  4 ota_0            OTA app          00 10 00020000 001d0000[0m
+[0;32mI (93) boot:  5 ota_1            OTA app          00 11 001f0000 001d0000[0m
+[0;32mI (99) boot: End of partition table[0m
+[0;32mI (102) esp_image: segment 0: paddr=00020020 vaddr=3c0e0020 size=4e59ch (320924) map[0m
+[0;32mI (166) esp_image: segment 1: paddr=0006e5c4 vaddr=3fc9d400 size=01a54h (  6740) load[0m
+[0;32mI (168) esp_image: segment 2: paddr=00070020 vaddr=42000020 size=dafa0h (896928) map[0m
+[0;32mI (328) esp_image: segment 3: paddr=0014afc8 vaddr=3fc9ee54 size=036b4h ( 14004) load[0m
+[0;32mI (332) esp_image: segment 4: paddr=0014e684 vaddr=40374000 size=19378h (103288) load[0m
+[0;32mI (355) esp_image: segment 5: paddr=00167a04 vaddr=50000000 size=0001ch (    28) load[0m
+[0;32mI (365) boot: Loaded app from partition at offset 0x20000[0m
+[0;32mI (365) boot: Disabling RNG early entropy source...[0m
+[0;32mI (375) cpu_start: Multicore app[0m
+[0;32mI (385) cpu_start: Pro cpu start user code[0m
+[0;32mI (385) cpu_start: cpu freq: 160000000 Hz[0m
+[0;32mI (385) app_init: Application information:[0m
+[0;32mI (385) app_init: Project name:     goku-ir-device[0m
+[0;32mI (389) app_init: App version:      1.0.12[0m
+[0;32mI (393) app_init: Compile time:     Jan  3 2026 23:14:20[0m
+[0;32mI (398) app_init: ELF file SHA256:  f5cdcc1e9...[0m
+[0;32mI (402) app_init: ESP-IDF:          v5.4.2-610-g1bfe1595fa-dirty[0m
+[0;32mI (408) efuse_init: Min chip rev:     v0.0[0m
+[0;32mI (412) efuse_init: Max chip rev:     v0.99 [0m
+[0;32mI (416) efuse_init: Chip rev:         v0.1[0m
+[0;32mI (420) heap_init: Initializing. RAM available for dynamic allocation:[0m
+[0;32mI (426) heap_init: At 3FCA8510 len 00041200 (260 KiB): RAM[0m
+[0;32mI (431) heap_init: At 3FCE9710 len 00005724 (21 KiB): RAM[0m
+[0;32mI (436) heap_init: At 3FCF0000 len 00008000 (32 KiB): DRAM[0m
+[0;32mI (442) heap_init: At 600FE000 len 00001FE8 (7 KiB): RTCRAM[0m
+[0;32mI (448) spi_flash: detected chip: generic[0m
+[0;32mI (451) spi_flash: flash io: dio[0m
+[0;32mI (454) sleep_gpio: Configure to isolate all GPIO pins in sleep state[0m
+[0;32mI (460) sleep_gpio: Enable automatic switching of GPIO sleep configuration[0m
+[0;32mI (467) main_task: Started on CPU0[0m
+[0;32mI (477) main_task: Calling app_main()[0m
+[0;32mI (477) main: Starting Goku IR Device...[0m
+[0;32mI (497) app_ir: Initializing IR Hardware...[0m
+[0;32mI (497) app_ir: Initializing RX Channel on GPIO 9...[0m
+[0;32mI (497) app_ir: Initializing TX Channel on GPIO 8...[0m
+[0;32mI (497) app_ir: IR Initialized (Native RMT + Copy Encoder)[0m
+[0;32mI (507) button: IoT Button Version: 3.5.0[0m
+[0;32mI (507) gpio: GPIO[3]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 [0m
+[0;32mI (517) app_button: Button initialized on GPIO 3[0m
+[0;32mI (517) pp: pp rom version: e7ae62f[0m
+[0;32mI (527) net80211: net80211 rom version: e7ae62f[0m
+[0;32mI (537) wifi:wifi driver task: 3fcb4498, prio:23, stack:6656, core=0[0m
+[0;32mI (547) wifi:wifi firmware version: 9b72132[0m
+[0;32mI (547) wifi:wifi certification version: v7.0[0m
+[0;32mI (547) wifi:config NVS flash: enabled[0m
+[0;32mI (547) wifi:config nano formatting: disabled[0m
+[0;32mI (547) wifi:Init data frame dynamic rx buffer num: 32[0m
+[0;32mI (557) wifi:Init static rx mgmt buffer num: 5[0m
+[0;32mI (557) wifi:Init management short buffer num: 32[0m
+[0;32mI (557) wifi:Init dynamic tx buffer num: 32[0m
+[0;32mI (567) wifi:Init static tx FG buffer num: 2[0m
+[0;32mI (567) wifi:Init static rx buffer size: 1600[0m
+[0;32mI (577) wifi:Init static rx buffer num: 10[0m
+[0;32mI (577) wifi:Init dynamic rx buffer num: 32[0m
+[0;32mI (577) wifi_init: rx ba win: 6[0m
+[0;32mI (587) wifi_init: accept mbox: 6[0m
+[0;32mI (587) wifi_init: tcpip mbox: 32[0m
+[0;32mI (587) wifi_init: udp mbox: 6[0m
+[0;32mI (597) wifi_init: tcp mbox: 6[0m
+[0;32mI (597) wifi_init: tcp tx win: 5760[0m
+[0;32mI (597) wifi_init: tcp rx win: 5760[0m
+[0;32mI (597) wifi_init: tcp mss: 1440[0m
+[0;32mI (607) wifi_init: WiFi IRAM OP enabled[0m
+[0;32mI (607) wifi_init: WiFi RX IRAM OP enabled[0m
+[0;32mI (617) esp_rmaker_work_queue: Work Queue created.[0m
+[0;32mI (627) esp_mqtt_glue: AWS PPI: ?Platform=APN3|A0|RM|EX00|RMDev|1x0|F0F5BD6D7640[0m
+[0;32mI (627) esp_mqtt_glue: Initialising MQTT[0m
+[0;32mI (627) esp_rmaker_mqtt_budget: MQTT Budgeting initialised. Default: 100, Max: 1024, Revive count: 1, Revive period: 5[0m
+[0;32mI (637) esp_rmaker_node: Node ID ----- F0F5BD6D7640[0m
+[0;32mI (647) esp_rmaker_ota_using_params: OTA enabled with Params[0m
+[0;32mI (647) esp_rmaker_ota: OTA state = -1[0m
+[0;32mI (657) esp_rmaker_time: Initializing SNTP. Using the SNTP server: pool.ntp.org[0m
+[0;32mI (657) esp_rmaker_time: SNTP already initialized.[0m
+[0;32mI (667) esp_rmaker_core: Starting RainMaker Work Queue task[0m
+[0;32mI (667) esp_rmaker_work_queue: RainMaker Work Queue task started.[0m
+[0;32mI (677) app_wifi: Already provisioned, starting Wi-Fi STA[0m
+[0;32mI (687) phy_init: phy_version 701,f4f1da3a,Mar  3 2025,15:50:10[0m
+[0;32mI (727) wifi:mode : sta (f0:f5:bd:6d:76:40)[0m
+[0;32mI (727) wifi:enable tsf[0m
+[0;32mI (727) app_wifi: Waiting for Wi-Fi connection...[0m
+[0;32mI (3137) wifi:new:<9,0>, old:<1,0>, ap:<255,255>, sta:<9,0>, prof:1, snd_ch_cfg:0x0[0m
+[0;32mI (3137) wifi:state: init -> auth (0xb0)[0m
+[0;32mI (3147) wifi:state: auth -> assoc (0x0)[0m
+[0;32mI (3157) wifi:state: assoc -> run (0x10)[0m
+[0;32mI (3267) wifi:connected with DEVICE_2.4G, aid = 7, channel 9, BW20, bssid = e2:19:54:dc:26:eb[0m
+[0;32mI (3267) wifi:security: WPA2-PSK, phy: bgn, rssi: -28[0m
+[0;32mI (3267) wifi:pm start, type: 1[0m
+
+[0;32mI (3277) wifi:dp: 1, bi: 102400, li: 3, scale listen interval from 307200 us to 307200 us[0m
+[0;32mI (3277) wifi:set rx beacon pti, rx_bcn_pti: 0, bcn_timeout: 25000, mt_pti: 0, mt_time: 10000[0m
+[0;32mI (3297) wifi:AP's beacon interval = 102400 us, DTIM period = 1[0m
+[0;32mI (5547) wifi:<ba-add>idx:0 (ifx:0, e2:19:54:dc:26:eb), tid:0, ssn:0, winSize:64[0m
+[0;32mI (6597) esp_netif_handlers: sta ip: 192.168.1.15, mask: 255.255.255.0, gw: 192.168.1.1[0m
+[0;32mI (6597) app_wifi: Got IP:192.168.1.15[0m
+[0;32mI (6597) app_wifi: Wi-Fi Connected[0m
+[0;32mI (6597) esp_rmaker_cmd_resp: Enabling Command-Response Module.[0m
+[0;32mI (6597) esp_rmaker_node: Node attribute cmd-resp created[0m
+[0;32mI (6607) esp_rmaker_param_cmd_resp: Enabling parameter command-response functionality[0m
+[0;32mI (6617) esp_rmaker_param_cmd_resp: Allocated 2048 bytes for command response buffer[0m
+[0;32mI (6627) esp_rmaker_common_cmd_resp: Registered command 1[0m
+[0;32mI (6627) esp_rmaker_param_cmd_resp: Registered standard set params command handler (id=1)[0m
+[0;32mI (6637) esp_mqtt_glue: Connecting to mqtt.rainmaker.espressif.com[0m
+[0;32mI (6637) esp_rmaker_core: Waiting for MQTT connection[0m
+[0;32mI (6647) mdns_mem: mDNS task will be created from internal RAM[0m
+[0;32mI (6647) app_mdns: mDNS hostname set to: [gokuac][0m
+[0;32mI (6657) wifi:<ba-add>idx:1 (ifx:0, e2:19:54:dc:26:eb), tid:6, ssn:2, winSize:64[0m
+[0;32mI (6667) app_web: Starting HTTP Server...[0m
+[0;32mI (6667) app_ota: Auto OTA Task Started. Local Version: 1.0.12 (10012)[0m
+[0;32mI (6677) app_ota: Server URL: https://wanted-saved-sport-hat.trycloudflare.com[0m
+[0;32mI (6677) main: Initialization Complete. Device ready.[0m
+[0;32mI (6687) main: Project version: 1.0.12[0m
+[0;32mI (7657) esp-x509-crt-bundle: Certificate validated[0m
+[0;32mI (9067) app_ota: Checked Version: error code: 1033 (0)[0m
+[0;32mI (11187) esp-x509-crt-bundle: Certificate validated[0m
+[0;32mI (15277) esp_mqtt_glue: MQTT Connected[0m
+[0;32mI (15287) esp_rmaker_cmd_resp: Checking for pending commands.[0m
+[0;32mI (15287) esp_rmaker_node_config: Generated Node config of length 1297[0m
+[0;32mI (15297) esp_rmaker_param: Params MQTT Init done.[0m
+[0;32mI (15297) esp_rmaker_param: Reporting params (init): {"Air Conditioner":{"Power":false,"Temperature":24.00000,"Mode":"Auto","Fan Speed":"Auto"},"OTA":{"Status":"","Info":"","URL":""}}[0m

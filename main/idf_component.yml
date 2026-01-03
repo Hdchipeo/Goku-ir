@@ -1,0 +1,5 @@
+dependencies:
+  espressif/led_strip: "^3.0.0"
+  espressif/button: "^3.2.0"
+  espressif/esp_rainmaker: "^1.0.0"
+

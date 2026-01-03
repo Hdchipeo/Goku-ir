@@ -1,0 +1,79 @@
+menu "Hardware Configuration"
+
+    config APP_LED_GPIO
+        int "LED GPIO"
+        default 2
+        help
+            GPIO number for the RGB LED (WS2812B).
+
+    config APP_BUTTON_GPIO
+        int "Button GPIO"
+        default 3
+        help
+            GPIO number for the onboard button.
+
+    config APP_BUTTON_ACTIVE_LEVEL
+        int "Button Active Level"
+        default 0
+        range 0 1
+        help
+            0: Active Low, 1: Active High.
+
+    config APP_IR_TX_GPIO
+        int "IR Transmitter GPIO"
+        default 8
+        help
+            GPIO number for the IR Transmitter LED.
+
+    config APP_IR_RX_GPIO
+        int "IR Receiver GPIO"
+        default 9
+        help
+            GPIO number for the IR Receiver Module.
+
+endmenu
+
+menu "WiFi Configuration"
+
+    config APP_PROV_SERVICE_NAME
+        string "Provisioning Service Name"
+        default "PROV_GOKU_AC"
+        help
+            Name of the BLE/SoftAP provisioning service.
+
+    config APP_PROV_POP
+        string "Proof of Possession (PoP)"
+        default "12345678"
+        help
+            Password for provisioning.
+
+    config APP_WIFI_FALLBACK_SSID
+        string "Fallback AP SSID"
+        default "Goku-Recovery"
+        help
+            SSID for the fallback Access Point.
+
+    config APP_WIFI_FALLBACK_PASSWORD
+        string "Fallback AP Password"
+        default "12345678"
+        help
+            Password for the fallback Access Point. Leave empty for Open.
+
+endmenu
+
+menu "OTA Configuration"
+
+    config OTA_SERVER_URL
+        string "OTA Server URL"
+        default "https://lopsided-plantation.surge.sh"
+        help
+            Base URL for the OTA server (e.g. https://tunnel.trycloudflare.com).
+            The device will look for version.txt and goku-ir-device.bin at this URL.
+
+    config OTA_CHECK_INTERVAL
+        int "OTA Check Interval (seconds)"
+        default 3600
+        help
+            How often to check for updates in seconds.
+
+endmenu
