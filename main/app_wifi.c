@@ -13,14 +13,25 @@
 #include "sdkconfig.h"
 #include <esp_rmaker_user_mapping.h>
 #include <network_provisioning/manager.h>
+#ifdef CONFIG_APP_WIFI_PROV_TRANSPORT_BLE
+#include <network_provisioning/scheme_ble.h>
+#else
 #include <network_provisioning/scheme_softap.h>
+#endif
 
 static const char *TAG = "app_wifi";
 static const int WIFI_CONNECTED_EVENT = BIT0;
 static EventGroupHandle_t wifi_event_group;
 static bool s_reconnect = true; // Control auto-reconnect
 
-#define PROV_TRANSPORT_SOFTAP "softap"
+#ifdef CONFIG_APP_WIFI_PROV_TRANSPORT_BLE
+#define PROV_TRANSPORT_NET_PROV_SCHEME network_prov_scheme_ble
+#define PROV_TRANSPORT_STR "ble"
+#else
+#define PROV_TRANSPORT_NET_PROV_SCHEME network_prov_scheme_softap
+#define PROV_TRANSPORT_STR "softap"
+#endif
+
 #define PROV_SECURITY_VER NETWORK_PROV_SECURITY_1
 #define PROV_POP CONFIG_APP_PROV_POP // Proof of Possession
 
@@ -109,8 +120,8 @@ void app_wifi_init(void) {
 }
 
 esp_err_t app_wifi_start(void) {
-  /* Initialize provisioning manager with SoftAP scheme */
-  network_prov_mgr_config_t config = {.scheme = network_prov_scheme_softap,
+  /* Initialize provisioning manager with selected scheme */
+  network_prov_mgr_config_t config = {.scheme = PROV_TRANSPORT_NET_PROV_SCHEME,
                                       .scheme_event_handler =
                                           NETWORK_PROV_EVENT_HANDLER_NONE};
   ESP_ERROR_CHECK(network_prov_mgr_init(config));
@@ -136,8 +147,8 @@ esp_err_t app_wifi_start(void) {
     ESP_LOGI(TAG,
              "QR Payload: "
              "{\"ver\":\"v1\",\"name\":\"%s\",\"pop\":\"%s\",\"transport\":"
-             "\"softap\"}",
-             service_name, service_key);
+             "\"%s\"}",
+             service_name, service_key, PROV_TRANSPORT_STR);
 
   } else {
     ESP_LOGI(TAG, "Already provisioned, starting Wi-Fi STA");

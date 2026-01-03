@@ -35,9 +35,26 @@ endmenu
 
 menu "WiFi Configuration"
 
+    choice APP_PROV_TRANSPORT_METHOD
+        prompt "Provisioning Transport Method"
+        default APP_WIFI_PROV_TRANSPORT_SOFTAP
+        help
+            Select the transport method for Wi-Fi provisioning.
+
+        config APP_WIFI_PROV_TRANSPORT_SOFTAP
+            bool "SoftAP"
+            help
+                Use SoftAP for provisioning.
+
+        config APP_WIFI_PROV_TRANSPORT_BLE
+            bool "BLE"
+            help
+                Use BLE for provisioning (requires Bluetooth enabled in sdkconfig).
+    endchoice
+
     config APP_PROV_SERVICE_NAME
         string "Provisioning Service Name"
-        default "PROV_GOKU_AC"
+        default "PROV_GOKU_IR"
         help
             Name of the BLE/SoftAP provisioning service.
 

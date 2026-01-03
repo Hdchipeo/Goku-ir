@@ -5,7 +5,6 @@
 #include <ctype.h>
 #include <esp_log.h>
 #include <esp_rmaker_core.h>
-#include <esp_rmaker_ota.h>
 #include <esp_rmaker_schedule.h>
 #include <esp_rmaker_standard_devices.h>
 #include <esp_rmaker_standard_params.h>
@@ -243,12 +242,6 @@ esp_err_t app_rainmaker_init(void) {
 
   /* Register callback */
   esp_rmaker_device_add_cb(ac_device, write_cb, NULL);
-
-  /* Enable OTA using PARAMS (Deprecated but required for CLI compatibility) */
-  esp_rmaker_ota_config_t ota_config = {
-      .server_cert = ESP_RMAKER_OTA_DEFAULT_SERVER_CERT,
-  };
-  esp_rmaker_ota_enable(&ota_config, OTA_USING_PARAMS);
 
   /* Start RainMaker */
   esp_rmaker_start();

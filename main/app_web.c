@@ -22,7 +22,7 @@ static const char *index_html =
     "<meta charset='UTF-8'>"
     "<meta name='viewport' content='width=device-width, initial-scale=1.0, "
     "maximum-scale=1.0, user-scalable=no'>"
-    "<title>Goku AC Control</title>"
+    "<title>Goku IR Control</title>"
     "<style>"
     ":root { --primary: #3b82f6; --bg: #0f172a; --card: #1e293b; --text: "
     "#e2e8f0; --success: #22c55e; --danger: #ef4444; }"
@@ -66,7 +66,7 @@ static const char *index_html =
     "</head>"
     "<body>"
     "<div class='container'>"
-    "<h1>Goku AC</h1>"
+    "<h1>Goku IR</h1>"
 
     "<div class='card'>"
     "<h3>Learning</h3>"

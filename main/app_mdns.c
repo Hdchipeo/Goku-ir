@@ -6,7 +6,7 @@
 static const char *TAG = "app_mdns";
 
 esp_err_t app_mdns_init(void) {
-  char *hostname = "gokuac";
+  char *hostname = "gokuir";
   char *desc = "Goku IR Device";
 
   // Initialize mDNS
