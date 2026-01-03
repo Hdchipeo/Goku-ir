@@ -1,0 +1,13 @@
+# ESP-IDF
+build/
+sdkconfig
+sdkconfig.old
+*.log
+managed_components/
+dependencies.lock
+dist/
+*.bin
+*.elf
+*.map
+*.hex
+idflint.log
