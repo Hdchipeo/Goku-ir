@@ -5,12 +5,12 @@
 ## 🌟 Key Features
 
 ### 🎮 Smart Control
-*   **Local WebUI**: Full control via `http://gokuac.local` (or IP address).
+*   **Local WebUI**: Full control via `http://gokuir.local` (or IP address).
     *   Control Power, Mode (Auto, Cool, Heat, Fan), and Temperature.
     *   Real-time Dashboard with device stats (Uptime, RSSI, Memory).
     *   **New**: Optimized loading speed and stable connection.
 *   **Remote Access**: Integrated **ESP RainMaker** for control from anywhere.
-*   **mDNS**: Automatically discoverable as `gokuac.local`.
+*   **mDNS**: Automatically discoverable as `gokuir.local`.
 
 ### 🌈 Advanced LED Control
 *   **Hardware**: Supports WS2812B/SK6812 8-LED Ring.
@@ -95,7 +95,7 @@ Upon first boot, the Main LED will breathe **Cyan** (Provisioning Mode).
     *   **Long Press (3s)**: Factory Reset (Base LED turns Red/Yellow, then restarts).
 
 ### 3. LED Control
-Navigate to `http://gokuac.local/` -> **LED Control**.
+Navigate to `http://gokuir.local/` -> **LED Control**.
 *   Select effects like **Rainbow**, **Fire**, or **Auto Cycle**.
 *   Adjust **Speed** (1-100) and **Brightness** (0-100).
 *   Click **Save Preset** to keep these settings after reboot.
