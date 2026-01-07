@@ -1,11 +1,11 @@
 #include "app_led.h"
-#include "driver/gpio.h"
+
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "led_strip.h"
 #include "nvs.h"
-#include "nvs_flash.h"
+
 #include "sdkconfig.h"
 #include <math.h>
 #include <stdlib.h>

@@ -11,7 +11,7 @@
 #include "esp_http_server.h"
 #include "esp_log.h"
 #include "esp_timer.h"
-#include <malloc.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define TAG "app_web"
