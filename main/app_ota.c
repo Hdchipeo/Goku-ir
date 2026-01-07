@@ -1,4 +1,5 @@
 #include "app_ota.h"
+#include "app_data.h"
 #include "app_led.h"
 #include "app_wifi.h"
 #include "esp_crt_bundle.h"
@@ -9,8 +10,13 @@
 #include "freertos/task.h"
 #include "sdkconfig.h"
 #include <string.h>
+#include <sys/time.h>
 
 static const char *TAG = "app_ota";
+
+static char g_remote_version[32] = "Unknown";
+static bool g_update_available = false;
+static TaskHandle_t s_ota_task_handle = NULL;
 
 /* Struct for OTA Task arguments */
 typedef struct {
@@ -25,8 +31,11 @@ static void ota_task(void *pvParameter) {
   esp_http_client_config_t config = {
       .url = args->url,
       .crt_bundle_attach = esp_crt_bundle_attach,
-      .keep_alive_enable = true,
-      .skip_cert_common_name_check = true // Optional: relax checks for testing
+      .keep_alive_enable = false,
+      .skip_cert_common_name_check = true, // Optional: relax checks for testing
+      .buffer_size = 8192,
+      .buffer_size_tx = 4096,
+      .timeout_ms = 60000,
   };
 
   esp_https_ota_config_t ota_config = {
@@ -37,6 +46,7 @@ static void ota_task(void *pvParameter) {
   esp_err_t ret = esp_https_ota(&ota_config);
   if (ret == ESP_OK) {
     ESP_LOGI(TAG, "OTA Success! Rebooting...");
+
     vTaskDelay(pdMS_TO_TICKS(1000));
     esp_restart();
   } else {
@@ -83,7 +93,11 @@ esp_err_t app_ota_check_version(char *out_remote_version, size_t buf_len) {
   esp_http_client_config_t config = {
       .url = url,
       .crt_bundle_attach = esp_crt_bundle_attach,
-      .timeout_ms = 5000,
+      .timeout_ms = 60000,
+      .buffer_size = 8192,
+      .buffer_size_tx = 4096,
+      .keep_alive_enable = false,
+      .skip_cert_common_name_check = true,
   };
 
   esp_http_client_handle_t client = esp_http_client_init(&config);
@@ -137,31 +151,62 @@ static void auto_update_task(void *pvParameter) {
       continue;
     }
 
+    // Wait for time sync (simple check for year > 2020)
+    time_t now;
+    struct tm timeinfo;
+    time(&now);
+    localtime_r(&now, &timeinfo);
+    ESP_LOGI(TAG, "Current Year: %d", timeinfo.tm_year + 1900);
+    if (timeinfo.tm_year < (2020 - 1900)) {
+      ESP_LOGW(TAG, "Time not synced yet (Year %d < 2020), waiting...",
+               timeinfo.tm_year + 1900);
+      vTaskDelay(pdMS_TO_TICKS(2000));
+      continue;
+    }
+
     if (app_ota_check_version(version_buffer, sizeof(version_buffer)) ==
         ESP_OK) {
       int remote_ver = parse_version(version_buffer);
       ESP_LOGI(TAG, "Checked Version: %s (%d)", version_buffer, remote_ver);
 
+      // Update cache
+      strncpy(g_remote_version, version_buffer, sizeof(g_remote_version) - 1);
+      g_remote_version[sizeof(g_remote_version) - 1] = 0;
+
       if (remote_ver > local_ver) {
+        g_update_available = true;
         ESP_LOGW(TAG, "New version found! Starting update...");
         snprintf(url, sizeof(url), "%s/goku-ir-device.bin",
                  CONFIG_OTA_SERVER_URL);
         app_ota_start(url);
+      } else {
+        g_update_available = false;
       }
     } else {
       ESP_LOGE(TAG, "Failed to check version");
     }
 
-    // Wait for interval
-    vTaskDelay(pdMS_TO_TICKS(CONFIG_OTA_CHECK_INTERVAL * 1000));
+    // Wait for interval or signal
+    ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(CONFIG_OTA_CHECK_INTERVAL * 1000));
   }
 }
 
 void app_ota_auto_init(void) {
   if (strlen(CONFIG_OTA_SERVER_URL) > 0 &&
       strcmp(CONFIG_OTA_SERVER_URL, "https://example.com") != 0) {
-    xTaskCreate(auto_update_task, "auto_ota", 4096, NULL, 5, NULL);
+    xTaskCreate(auto_update_task, "auto_ota", 10240, NULL, 5,
+                &s_ota_task_handle);
   } else {
     ESP_LOGW(TAG, "Auto OTA not started: URL not configured");
+  }
+}
+
+const char *app_ota_get_cached_version(void) { return g_remote_version; }
+
+bool app_ota_is_update_available(void) { return g_update_available; }
+
+void app_ota_trigger_check(void) {
+  if (s_ota_task_handle) {
+    xTaskNotifyGive(s_ota_task_handle);
   }
 }

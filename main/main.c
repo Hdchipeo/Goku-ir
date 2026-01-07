@@ -11,7 +11,9 @@
 #include "app_data.h"
 #include "app_ir.h"
 #include "app_led.h"
+#include "app_log.h"
 #include "app_mdns.h"
+#include "app_mem.h"
 #include "app_ota.h"
 #include "app_rainmaker.h"
 #include "app_web.h"
@@ -28,6 +30,8 @@
 #define TAG "main"
 
 void app_main(void) {
+  app_log_init();
+  app_mem_init();
   ESP_LOGI(TAG, "Starting Goku IR Device...");
   ESP_LOGI(TAG, "Project version: %s", PROJECT_VERSION);
 

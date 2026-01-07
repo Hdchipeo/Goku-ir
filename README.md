@@ -9,7 +9,15 @@
 - **ESP RainMaker Integration**: Remote control, provisioning, and param updates via the RainMaker App.
 - **Local Web Interface**: Control the device locally via a browser at `http://gokuac.local`.
 - **Automatic OTA Updates**: Periodically checks for firmware updates from a configured server.
+- **Advanced LED Control**: Full RGB control with 8-LED ring, multiple effects (Rainbow, Fire, Matrix, etc.), and **Auto Cycle** mode.
+- **Improved Dashboard**: Faster loading and more stable connection logic.
 - **mDNS Support**: Easily discoverable on the network as `gokuac.local`.
+
+## LED Control Features
+- **Effects**: Random, Auto Cycle, Rainbow, Running, Breathing, Blink, Knight Rider, Loading, Color Wipe, Theater Chase, Fire, Sparkle, Static.
+- **Per-LED Customization**: Set individual colors for the Running effect or Static mode.
+- **Speed & Brightness**: Fine-tune the speed and brightness of all effects.
+- **Persistence**: Saves your last used Effect, Speed, Brightness, and Colors (via "Save Preset") to survive reboots.
 
 ## Hardware Requirements
 

@@ -8,7 +8,7 @@ cmake_minimum_required(VERSION 3.16)
 
 # set(EXCLUDE_COMPONENTS button)
 # set project version
-set(PROJECT_VERSION "1.1.2")
+set(PROJECT_VERSION "1.2.10")
 add_compile_definitions(PROJECT_VERSION=\"${PROJECT_VERSION}\")
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)

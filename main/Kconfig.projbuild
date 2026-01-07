@@ -37,7 +37,7 @@ menu "WiFi Configuration"
 
     choice APP_PROV_TRANSPORT_METHOD
         prompt "Provisioning Transport Method"
-        default APP_WIFI_PROV_TRANSPORT_SOFTAP
+        default APP_WIFI_PROV_TRANSPORT_BLE
         help
             Select the transport method for Wi-Fi provisioning.
 
@@ -82,7 +82,7 @@ menu "OTA Configuration"
 
     config OTA_SERVER_URL
         string "OTA Server URL"
-        default "https://lopsided-plantation.surge.sh"
+        default "https://salty-mouth.surge.sh"
         help
             Base URL for the OTA server (e.g. https://tunnel.trycloudflare.com).
             The device will look for version.txt and goku-ir-device.bin at this URL.

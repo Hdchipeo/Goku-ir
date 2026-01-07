@@ -1,6 +1,7 @@
 #pragma once
 
 #include "esp_err.h"
+#include <stdbool.h>
 
 /**
  * @brief Start OTA update from a given URL
@@ -18,6 +19,11 @@ esp_err_t app_ota_start(const char *url);
  * @return esp_err_t ESP_OK if check success, ESP_FAIL otherwise
  */
 esp_err_t app_ota_check_version(char *out_remote_version, size_t buf_len);
+
+// Non-blocking cached status
+const char *app_ota_get_cached_version(void);
+bool app_ota_is_update_available(void);
+void app_ota_trigger_check(void);
 
 /**
  * @brief Initialize automatic OTA checks

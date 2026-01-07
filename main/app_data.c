@@ -3,6 +3,7 @@
 #include "nvs.h"
 #include "nvs_flash.h"
 #include <malloc.h>
+#include <string.h>
 
 #define TAG "app_data"
 #define NVS_NAMESPACE "ir_data"
