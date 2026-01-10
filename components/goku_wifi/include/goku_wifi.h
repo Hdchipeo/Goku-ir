@@ -13,11 +13,12 @@
 void app_wifi_init(void);
 
 /**
- * @brief Start Wi-Fi (Provisioning or Station mode)
+ * @brief Start Wi-Fi
  *
- * @return esp_err_t ESP_OK on success
+ * @param pop_info Pointer to provisioning information (e.g., QR code data)
+ * @return esp_err_t ESP_OK or fail
  */
-esp_err_t app_wifi_start(void);
+esp_err_t app_wifi_start(void *pop_info);
 
 /**
  * @brief Update Wi-Fi credentials and restart

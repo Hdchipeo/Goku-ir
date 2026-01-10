@@ -10,7 +10,9 @@
 #include "goku_button.h"
 #include "goku_data.h"
 #include "goku_ir_app.h"
+#if CONFIG_APP_LED_CONTROL
 #include "goku_led.h"
+#endif
 #include "goku_log.h"
 #include "goku_mdns.h"
 #include "goku_mem.h"
@@ -29,6 +31,21 @@
 
 #define TAG "main"
 
+static void web_ui_toggle_cb(bool enable) {
+  if (enable) {
+    app_web_start();
+  } else {
+    app_web_stop();
+  }
+}
+
+static void ip_event_handler(void *arg, esp_event_base_t event_base,
+                             int32_t event_id, void *event_data) {
+  if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
+    app_ota_mark_valid();
+  }
+}
+
 void app_main(void) {
   app_log_init();
   app_mem_init();
@@ -41,6 +58,8 @@ void app_main(void) {
   // 2. Initialize Network Stack
   ESP_ERROR_CHECK(esp_netif_init());
   ESP_ERROR_CHECK(esp_event_loop_create_default());
+  ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP,
+                                             &ip_event_handler, NULL));
 
   // 3. Initialize IR Remote (Priority for RMT resources)
   if (app_ir_init() != ESP_OK) {
@@ -48,8 +67,10 @@ void app_main(void) {
   }
 
   // 4. Initialize Peripherals (LED, Button)
+#if CONFIG_APP_LED_CONTROL
   ESP_ERROR_CHECK(app_led_init());
   app_led_set_state(APP_LED_STARTUP);
+#endif
 
   ESP_ERROR_CHECK(app_button_init());
 
@@ -59,11 +80,12 @@ void app_main(void) {
 
   // 6. Initialize RainMaker Node
   // Registers Devices, Parameters, and Provisioning Endpoints.
+  app_rainmaker_register_webui_toggle(web_ui_toggle_cb);
   app_rainmaker_init();
 
   // 7. Start Provisioning / Network
-  // Starts SoftAP provisioning transport.
-  ESP_ERROR_CHECK(app_wifi_start());
+  // Start BLE Provisioning (Standard RainMaker)
+  app_wifi_start(NULL);
 
   // 8. Initialize mDNS
   // Hostname: gokuac.local
@@ -72,7 +94,7 @@ void app_main(void) {
   // 9. Initialize Web Server
   // Starts web interface for manual control via browser.
   if (app_web_init() != ESP_OK) {
-    ESP_LOGE(TAG, "Failed to init Web Server");
+    ESP_LOGE(TAG, "Failed to init Web Server resources");
   }
 
   // 10. Initialize Automatic OTA

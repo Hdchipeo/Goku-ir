@@ -1,5 +1,12 @@
 menu "Hardware Configuration"
 
+    config APP_LED_CONTROL
+        bool "Enable LED Control (WS2812B)"
+        default n
+        help
+            Enable support for WS2812B LED control (Web UI & RainMaker).
+            If disabled, LED driver and related APIs will not be compiled.
+
     config APP_LED_GPIO
         int "LED GPIO"
         default 2

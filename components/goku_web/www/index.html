@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang='en'>
+
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'>
+    <title>Goku IR Control</title>
+    <link href='https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap' rel='stylesheet'>
+    <link rel='stylesheet' href='style.css'>
+    <script src='https://cdn.jsdelivr.net/npm/chart.js' defer></script>
+    <script src='app.js' defer></script>
+</head>
+
+<body>
+
+    <div id='overlay' class='overlay' onclick='toggleSidebar()'></div>
+    <button id='menu-toggle' onclick='toggleSidebar()'>☰</button>
+
+    <div id='sidebar' class='sidebar' role='navigation' aria-label='Main navigation'>
+        <h2 id='appLogo' onclick='handleLogoClick()' style='cursor:pointer;user-select:none'
+            title='Triple-click for Debug Mode'>
+            Goku IR
+            <span id='debugBadge' class='debug-badge hidden'>DEBUG</span>
+        </h2>
+        <a class='nav-item' onclick='navTo("dashboard")' role='button' tabindex='0'>
+            <span class='nav-icon'>📊</span> Dashboard
+        </a>
+        <a class='nav-item' onclick='navTo("controls")' role='button' tabindex='0'>
+            <span class='nav-icon'>❄️</span> AC Control
+        </a>
+        <a class='nav-item' onclick='navTo("learning")' role='button' tabindex='0'>
+            <span class='nav-icon'>📡</span> IR Learning
+        </a>
+        <a id='nav-led' class='nav-item' onclick='navTo("led")' role='button' tabindex='0'>
+            <span class='nav-icon'>💡</span> LED Control
+        </a>
+        <a class='nav-item' onclick='navTo("wifi")' role='button' tabindex='0'>
+            <span class='nav-icon'>📶</span> Wi-Fi
+        </a>
+        <a class='nav-item' onclick='navTo("logs")' role='button' tabindex='0'>
+            <span class='nav-icon'>📝</span> System Logs
+        </a>
+        <a class='nav-item' onclick='navTo("ota")' role='button' tabindex='0'>
+            <span class='nav-icon'>⚙️</span> Firmware
+        </a>
+    </div>
+
+    <div class='main-content'>
+        <div class='container'>
+            <!-- Dashboard View -->
+            <div id='dashboard' class='view'>
+                <!-- Stats Grid -->
+                <div class='neon-grid'>
+                    <!-- Temp Card (Always Visible) -->
+                    <div class='neon-card' style='border-color:#f59e0b;'>
+                        <h4 style='color:#f59e0b;text-shadow:0 0 3px #f59e0b'>TEMP</h4>
+                        <div id='valTemp' class='neon-val-big'>--&deg;C</div>
+                        <div class='neon-bar-track'>
+                            <div id='progTemp' class='neon-bar-fill'
+                                style='background:#f59e0b;box-shadow:0 0 8px #f59e0b;width:0%'></div>
+                        </div>
+                    </div>
+                    <!-- RAM Card -->
+                    <div class='neon-card' style='border-color:#3b82f6;'>
+                        <h4 style='color:#3b82f6;text-shadow:0 0 3px #3b82f6'>RAM USAGE</h4>
+                        <div id='valRam' class='neon-val-big'>--%</div>
+                        <div class='neon-bar-track'>
+                            <div id='progRam' class='neon-bar-fill'
+                                style='background:#3b82f6;box-shadow:0 0 8px #3b82f6;width:0%'></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Debug Mode Only -->
+                <div class='debug-only'>
+                    <div class='neon-grid' style='margin-top:15px'>
+                        <!-- CPU Card (Debug Only) -->
+                        <div class='neon-card' style='border-color:#a855f7;'>
+                            <h4 style='color:#a855f7;text-shadow:0 0 3px #a855f7'>CPU <small
+                                    style='opacity:0.7'>(N/A)</small></h4>
+                            <div id='valCpu' class='neon-val-big'>N/A</div>
+                        </div>
+                        <!-- PSRAM Card (Debug Only) -->
+                        <div class='neon-card' style='border-color:#10b981;'>
+                            <h4 style='color:#10b981;text-shadow:0 0 3px #10b981'>PSRAM <small
+                                    style='opacity:0.7'>(N/A)</small></h4>
+                            <div id='valPsram' class='neon-val-big'>N/A</div>
+                        </div>
+                    </div>
+
+                    <!-- Technical Details -->
+                    <div class='debug-technical-info' style='margin-top:15px'>
+                        <h4 style='color:#94a3b8;margin-bottom:10px'>Technical Details</h4>
+                        <ul style='list-style:none;padding:0;color:#cbd5e1;font-size:0.9rem'>
+                            <li>Free Heap: <span id='txtFreeHeap'>--</span></li>
+                            <li>Min Heap: <span id='txtMinHeap'>--</span></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Heap Chart (Debug Only) -->
+                <div class='chart-container debug-only' style='margin-bottom:15px'>
+                    <canvas id='heapChart'></canvas>
+                </div>
+
+                <!-- RSSI Chart (Always Visible) -->
+                <div class='chart-container'>
+                    <canvas id='rssiChart'></canvas>
+                </div>
+
+                <!-- System Health Card -->
+                <div class='card' style='margin-top:20px;padding:15px'>
+                    <h3 style='margin-bottom:10px;font-size:0.85rem'>System Health</h3>
+                    <div style='display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:0.9rem;color:#cbd5e1'>
+                        <div>Firmware: <span id='txtFirmware' style='color:#fff'>--</span></div>
+                        <div style='text-align:right'>Uptime: <span id='txtUptime' style='color:#fff'>0m</span></div>
+                        <div
+                            style='grid-column:1/-1;border-top:1px solid #334155;margin-top:5px;padding-top:5px;text-align:center'>
+                            Status: <span id='dashStatus' style='color:var(--success)'>Active</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bottom Pulse -->
+                <div class='bottom-pulse'></div>
+            </div>
+
+            <!-- AC & Learning Controls View -->
+            <div id='controls' class='view hidden'>
+                <h2>AC Control Center</h2>
+
+                <!-- Controls Section -->
+                <div class='card'>
+                    <h3 style='margin-bottom:20px'>Remote Control</h3>
+
+                    <div class='control-group' style='flex-direction:column;align-items:stretch'>
+                        <span class='control-label'>Brand Selection</span>
+                        <input type='text' id='brandSearch' placeholder='Search brands...'
+                            style='margin-bottom:8px;padding:8px 12px;font-size:0.9rem'
+                            oninput='filterBrands(this.value)'>
+                        <select id='brandSelect' onchange='saveAC()'>
+                            <optgroup label="Preset Brands">
+                                <option value='0'>Daikin</option>
+                                <option value='1'>Samsung</option>
+                                <option value='2'>Mitsubishi</option>
+                                <option value='3'>Panasonic</option>
+                                <option value='4'>LG</option>
+                            </optgroup>
+                            <optgroup id='customBrandsGroup' label="Custom Brands" style='display:none'>
+                                <!-- Dynamically populated from API -->
+                            </optgroup>
+                        </select>
+                    </div>
+
+                    <div class='control-group' style='flex-direction:column;align-items:stretch'>
+                        <span class='control-label' style='margin-bottom:10px'>Power</span>
+                        <div style='display:grid;grid-template-columns:1fr 1fr;gap:15px'>
+                            <button class='btn' id='btnOff'
+                                style='background:#334155;color:#94a3b8;height:50px;font-size:1.1rem;display:flex;align-items:center;justify-content:center'
+                                onclick="setPower(false)">
+                                <span>&#9211; OFF</span></button>
+                            <button class='btn' id='btnOn'
+                                style='background:#334155;color:#94a3b8;height:50px;font-size:1.1rem;display:flex;align-items:center;justify-content:center'
+                                onclick="setPower(true)">
+                                <span>&#9211; ON</span></button>
+                        </div>
+                    </div>
+
+                    <div class='control-group'>
+                        <span class='control-label'>Operation Mode</span>
+                        <div style='display:flex;gap:10px'>
+                            <select id='modeSelect' style='width:120px' onchange='saveAC()'>
+                                <option value='0'>Auto</option>
+                                <option value='1'>Cool</option>
+                                <option value='2'>Heat</option>
+                                <option value='3'>Fan</option>
+                                <option value='4'>Dry</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class='control-group'>
+                        <span class='control-label'>Fan Speed</span>
+                        <div style='display:flex;gap:10px'>
+                            <select id='fanSelect' style='width:120px' onchange='saveAC()'>
+                                <option value='0'>Auto</option>
+                                <option value='1'>Low</option>
+                                <option value='2'>Medium</option>
+                                <option value='3'>High</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class='control-group'>
+                        <span class='control-label'>Temperature</span>
+                        <div style='display:flex;gap:10px'>
+                            <select id='tempSelect' style='width:120px' onchange='saveAC()'>
+                                <option value='16'>16&deg;C</option>
+                                <option value='17'>17&deg;C</option>
+                                <option value='18'>18&deg;C</option>
+                                <option value='19'>19&deg;C</option>
+                                <option value='20'>20&deg;C</option>
+                                <option value='21'>21&deg;C</option>
+                                <option value='22'>22&deg;C</option>
+                                <option value='23'>23&deg;C</option>
+                                <option value='24'>24&deg;C</option>
+                                <option value='25'>25&deg;C</option>
+                                <option value='26'>26&deg;C</option>
+                                <option value='27'>27&deg;C</option>
+                                <option value='28'>28&deg;C</option>
+                                <option value='29'>29&deg;C</option>
+                                <option value='30'>30&deg;C</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button class='btn' style='margin-top:10px' onclick='saveAC()'>SEND COMMAND</button>
+                </div>
+
+                <!-- Saved Keys Card (Moved from Learning) -->
+                <div id='keys' class='card'>
+                    <h3>Saved Keys</h3>
+                    <div id='keyList'>Loading...</div>
+                </div>
+
+            </div>
+
+            <!-- New Learning View -->
+            <div id='learning' class='view hidden'>
+                <h2>IR Learning Lab</h2>
+                <div class='card'>
+                    <div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:15px'>
+                        <h3 style='margin:0'>Signal Capture</h3>
+                        <div id='learnStatus' class='status'
+                            style='padding:5px 10px;border-radius:20px;font-size:0.8rem;background:#334155'>Ready</div>
+                    </div>
+                    <div style='display:flex;gap:10px'>
+                        <button class='btn' style='flex:1;background:var(--primary)' onclick='startLearn()'>Start
+                            Learning</button>
+                        <button class='btn btn-secondary' style='flex:1' onclick='stopLearn()'>Stop</button>
+                    </div>
+
+                    <!-- AC Metadata Inputs -->
+                    <div style='margin-top:15px;padding-top:10px;border-top:1px dashed #334155'>
+                        <h4 style='margin:0 0 10px 0;color:#9ca3af;font-size:0.9rem'>AC Command Details</h4>
+                        <div class='control-group' style='gap:8px'>
+                            <select id='learnBrand' onchange='genKeyName()' style='flex:1'>
+                                <optgroup label='Preset Brands'>
+                                    <option value='daikin'>Daikin</option>
+                                    <option value='samsung'>Samsung</option>
+                                    <option value='mitsubishi'>Mitsubishi</option>
+                                    <option value='panasonic'>Panasonic</option>
+                                    <option value='lg'>LG</option>
+                                </optgroup>
+                                <optgroup id='learnCustomBrandsGroup' label='Custom Brands' style='display:none'>
+                                    <!-- Populated dynamically -->
+                                </optgroup>
+                            </select>
+                            <button class='btn btn-secondary' style='width:auto;min-height:48px;padding:0 16px'
+                                onclick='openBrandManager()' title='Manage Custom Brands'>⚙️</button>
+                        </div>
+                        <div class='control-group'>
+                            <select id='learnPower' onchange='genKeyName()'>
+                                <option value='on'>Power ON</option>
+                                <option value='off'>Power OFF</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class='control-group'>
+                        <select id='learnMode' onchange='genKeyName()'>
+                            <option value='auto'>Auto</option>
+                            <option value='cool'>Cool</option>
+                            <option value='heat'>Heat</option>
+                            <option value='fan'>Fan</option>
+                            <option value='dry'>Dry</option>
+                        </select>
+                        <select id='learnTemp' onchange='genKeyName()'>
+                            <option value='16'>16&deg;C</option>
+                            <option value='17'>17&deg;C</option>
+                            <option value='18'>18&deg;C</option>
+                            <option value='19'>19&deg;C</option>
+                            <option value='20'>20&deg;C</option>
+                            <option value='21'>21&deg;C</option>
+                            <option value='22'>22&deg;C</option>
+                            <option value='23'>23&deg;C</option>
+                            <option value='24'>24&deg;C</option>
+                            <option value='25'>25&deg;C</option>
+                            <option value='26'>26&deg;C</option>
+                            <option value='27'>27&deg;C</option>
+                            <option value='28'>28&deg;C</option>
+                            <option value='29'>29&deg;C</option>
+                            <option value='30'>30&deg;C</option>
+                        </select>
+                        <select id='learnFan' onchange='genKeyName()'>
+                            <option value='auto'>Fan Auto</option>
+                            <option value='low'>Fan Low</option>
+                            <option value='medium'>Fan Med</option>
+                            <option value='high'>Fan High</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Save Form -->
+                <div id='saveForm' class='hidden' style='margin-top:15px;padding-top:15px;border-top:1px solid #334155'>
+                    <h4 style='margin:0 0 10px 0;color:#9ca3af;font-size:0.9rem'>Save as New Key</h4>
+                    <div style='display:flex;gap:10px'>
+                        <input type='text' id='keyNameInput' placeholder='Key Name' style='flex:1'>
+                        <button class='btn btn-success' onclick='saveLearnedKey()'>SAVE</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id='led' class='view hidden'>
+                <div class='card'>
+                    <div style='display:flex;align-items:center;margin-bottom:15px'>
+                        <h2 style='margin:0;flex:1;text-align:center'>LED CONTROL</h2>
+                        <div style='width:40px'></div>
+                    </div>
+
+                    <!-- Effect Tabs -->
+                    <div class='effect-tabs'>
+                        <button class='effect-tab active' onclick="setTab('static', this)">Static</button>
+                        <button class='effect-tab' onclick="setTab('running', this)">Running</button>
+                        <button class='effect-tab' onclick="setTab('rainbow', this)">Rainbow</button>
+                        <button class='effect-tab' onclick="setTab('fire', this)">Fire</button>
+                        <button class='effect-tab' onclick="setTab('breathing', this)">Breathing</button>
+                        <button class='effect-tab' onclick="setTab('blink', this)">Blink</button>
+                        <button class='effect-tab' onclick="setTab('knight_rider', this)">Knight Rider</button>
+                        <button class='effect-tab' onclick="setTab('theater_chase', this)">Chase</button>
+                        <button class='effect-tab' onclick="setTab('color_wipe', this)">Wipe</button>
+                        <button class='effect-tab' onclick="setTab('loading', this)">Loading</button>
+                        <button class='effect-tab' onclick="setTab('sparkle', this)">Sparkle</button>
+                        <button class='effect-tab' onclick="setTab('random', this)">Random</button>
+                        <button class='effect-tab' onclick="setTab('auto_cycle', this)">Auto Cycle</button>
+                    </div>
+
+                    <!-- Controls -->
+                    <div class='control-row'>
+                        <span class='control-label'>SPEED</span>
+                        <span id='valSpeed'>50</span>
+                    </div>
+                    <input type='range' id='ledSpeed' min='1' max='100' value='50' onchange='saveLedConfig()'>
+
+                    <div class='control-row' style='margin-top:20px'>
+                        <span class='control-label'>BRIGHTNESS</span>
+                        <span id='valBright'>100</span>
+                    </div>
+                    <input type='range' id='ledBright' min='0' max='100' value='100' onchange='saveLedConfig()'>
+
+                    <!-- Ring -->
+                    <div class='led-ring-container'>
+                        <div id='ledRing' class='led-ring'></div>
+                    </div>
+
+                    <!-- Palette & Custom Color -->
+                    <div style='display:flex;justify-content:space-between;align-items:end'>
+                        <span class='control-label'>CUSTOM COLOR</span>
+                        <input type='color' id='customColor' value='#ffffff' style='width:50px;height:40px;padding:2px'
+                            onchange='applyColor(this.value)'>
+                    </div>
+
+                    <div class='palette'>
+                        <div class='color-swatch' style='background:#ef4444' onclick="applyColor('#ef4444')"></div>
+                        <div class='color-swatch' style='background:#f97316' onclick="applyColor('#f97316')"></div>
+                        <div class='color-swatch' style='background:#f59e0b' onclick="applyColor('#f59e0b')"></div>
+                        <div class='color-swatch' style='background:#22c55e' onclick="applyColor('#22c55e')"></div>
+                        <div class='color-swatch' style='background:#06b6d4' onclick="applyColor('#06b6d4')"></div>
+                        <div class='color-swatch' style='background:#3b82f6' onclick="applyColor('#3b82f6')"></div>
+                        <div class='color-swatch' style='background:#a855f7' onclick="applyColor('#a855f7')"></div>
+                        <div class='color-swatch' style='background:#ffffff' onclick="applyColor('#ffffff')"></div>
+                        <div class='color-swatch' style='background:#000000;border-color:#475569'
+                            onclick="applyColor('#000000')"></div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div style='display:flex;gap:10px;margin-top:10px'>
+                        <button class='btn' onclick='applyToAll()'>APPLY TO ALL</button>
+                        <button class='btn btn-secondary' onclick='savePreset()'>SAVE PRESET</button>
+                    </div>
+
+                </div>
+            </div>
+
+            <div id='logs' class='card view hidden'>
+                <h3>System Logs</h3>
+                <div id='logViewer'>Loading...</div>
+            </div>
+
+            <div id='wifi' class='card view hidden'>
+                <h3>Wi-Fi Settings</h3>
+                <div class='row'>
+                    <input type='text' id='wifiSSID' placeholder='SSID'>
+                    <button id='scanBtn' class='btn' style='width: 80px' onclick='scanWifi()'>Scan</button>
+                </div>
+                <div id='scanList' class='hidden'
+                    style='margin-bottom: 10px; max-height: 150px; overflow-y: auto; border: 1px solid #334155; border-radius: 8px;'>
+                </div>
+                <div class='row'>
+                    <input type='password' id='wifiPass' placeholder='Password' autocomplete='current-password'>
+                </div>
+                <div class='row'>
+                    <button class='btn' onclick='saveWifi()'>Save & Connect</button>
+                </div>
+            </div>
+
+            <div id='ota' class='card view hidden'>
+                <h3>Firmware Update</h3>
+                <div id='otaSection'>
+                    <p class='status' style='margin-bottom: 10px'>System Version: <span
+                            id='currentVer'>Loading...</span>
+                    </p>
+                    <button class='btn' onclick='checkUpdate()'>Check for Updates</button>
+                </div>
+                <div id='updateAvailable' class='hidden'>
+                    <p class='status' style='color: var(--success); margin-bottom: 10px'>New Version Available: <b
+                            id='newVer'></b></p>
+                    <button class='btn btn-success' onclick='startUpdate()'>Update Now</button>
+                </div>
+                <div id='otaStatus' class='status'></div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Brand Management Modal -->
+    <div id='brandModal' class='modal hidden'>
+        <div class='modal-content'>
+            <h3 style='margin-top:0'>Manage Custom Brands</h3>
+
+            <!-- Add New Brand -->
+            <div class='modal-section'>
+                <h4 style='font-size:0.9rem;color:#cbd5e1;margin:0 0 10px 0'>Add New Brand</h4>
+                <div style='display:flex;gap:10px'>
+                    <input type='text' id='newBrandName' placeholder='Brand Name' maxlength='32'>
+                    <button class='btn' style='width:auto;min-width:80px' onclick='addCustomBrand()'>Add</button>
+                </div>
+            </div>
+
+            <!-- Existing Custom Brands -->
+            <div class='modal-section'>
+                <h4 style='font-size:0.9rem;color:#cbd5e1;margin:0 0 10px 0'>Custom Brands</h4>
+                <div id='customBrandsList'>Loading...</div>
+            </div>
+
+            <button class='btn btn-secondary' onclick='closeBrandManager()'>Close</button>
+        </div>
+    </div>
+
+    <div id='toast-container' class='toast-container'></div>
+</body>
+
+</html>

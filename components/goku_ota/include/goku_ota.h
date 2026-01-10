@@ -54,3 +54,17 @@ void app_ota_trigger_check(void);
  * Only works if CONFIG_OTA_SERVER_URL is set.
  */
 void app_ota_auto_init(void);
+
+/**
+ * @brief Mark current running app as valid (cancels rollback)
+ *
+ * Should be called after successful boot and connectivity verification.
+ */
+void app_ota_mark_valid(void);
+
+/**
+ * @brief Get OTA update history as JSON string
+ *
+ * @return char* JSON string (caller must free), or NULL if error/empty
+ */
+char *app_ota_get_history(void);

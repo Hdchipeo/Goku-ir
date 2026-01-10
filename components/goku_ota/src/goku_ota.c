@@ -1,18 +1,25 @@
 #include "goku_ota.h"
+#include "cJSON.h"
 #include "esp_crt_bundle.h"
 #include "esp_http_client.h"
 #include "esp_https_ota.h"
 #include "esp_log.h"
+#include "esp_ota_ops.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "goku_data.h"
 #include "goku_led.h"
 #include "goku_wifi.h"
+#include "nvs.h"
+#include "nvs_flash.h"
 #include "sdkconfig.h"
 #include <string.h>
 #include <sys/time.h>
+#include <time.h>
 
 static const char *TAG = "goku_ota";
+#define OTA_HISTORY_KEY "ota_history"
+#define MAX_HISTORY_ENTRIES 5
 
 static char g_remote_version[32] = "Unknown";
 static bool g_update_available = false;
@@ -21,7 +28,98 @@ static TaskHandle_t s_ota_task_handle = NULL;
 /* Struct for OTA Task arguments */
 typedef struct {
   char url[256];
+  char version[32];
 } ota_task_args_t;
+
+/* --- History Helper Functions --- */
+
+static void add_ota_history(const char *version, bool success) {
+  nvs_handle_t nvs;
+  esp_err_t err = nvs_open("storage", NVS_READWRITE, &nvs);
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG, "Failed to open NVS for history");
+    return;
+  }
+
+  cJSON *history = NULL;
+  size_t required_size = 0;
+  err = nvs_get_str(nvs, OTA_HISTORY_KEY, NULL, &required_size);
+  if (err == ESP_OK && required_size > 0) {
+    char *json_str = malloc(required_size);
+    if (json_str) {
+      nvs_get_str(nvs, OTA_HISTORY_KEY, json_str, &required_size);
+      history = cJSON_Parse(json_str);
+      free(json_str);
+    }
+  }
+
+  if (!history) {
+    history = cJSON_CreateArray();
+  }
+
+  // Create new entry
+  cJSON *entry = cJSON_CreateObject();
+  cJSON_AddStringToObject(entry, "ver", version);
+  cJSON_AddBoolToObject(entry, "success", success);
+  cJSON_AddNumberToObject(entry, "ts", (double)time(NULL));
+
+  // Add to array (at beginning is hard with cJSON, so append and maybe reverse
+  // on read, or just append and we read backwards. actually
+  // cJSON_AddItemToArray appends. To keep 5 newest, we can append, then remove
+  // from beginning if size > 5.
+  cJSON_AddItemToArray(history, entry);
+
+  int size = cJSON_GetArraySize(history);
+  while (size > MAX_HISTORY_ENTRIES) {
+    cJSON_DeleteItemFromArray(history, 0); // Remove oldest
+    size = cJSON_GetArraySize(history);
+  }
+
+  // Save back
+  char *new_json = cJSON_PrintUnformatted(history);
+  if (new_json) {
+    nvs_set_str(nvs, OTA_HISTORY_KEY, new_json);
+    free(new_json);
+  }
+  cJSON_Delete(history);
+  nvs_commit(nvs);
+  nvs_close(nvs);
+}
+
+char *app_ota_get_history(void) {
+  nvs_handle_t nvs;
+  esp_err_t err = nvs_open("storage", NVS_READONLY, &nvs);
+  if (err != ESP_OK) {
+    return NULL;
+  }
+
+  size_t required_size = 0;
+  err = nvs_get_str(nvs, OTA_HISTORY_KEY, NULL, &required_size);
+  if (err != ESP_OK || required_size == 0) {
+    nvs_close(nvs);
+    return strdup("[]");
+  }
+
+  char *json_str = malloc(required_size);
+  if (json_str) {
+    nvs_get_str(nvs, OTA_HISTORY_KEY, json_str, &required_size);
+  }
+  nvs_close(nvs);
+  return json_str;
+}
+
+void app_ota_mark_valid(void) {
+  const esp_partition_t *running = esp_ota_get_running_partition();
+  esp_ota_img_states_t ota_state;
+  if (esp_ota_get_state_partition(running, &ota_state) == ESP_OK) {
+    if (ota_state == ESP_OTA_IMG_PENDING_VERIFY) {
+      ESP_LOGI(TAG, "Marking app as valid, cancelling rollback");
+      esp_ota_mark_app_valid_cancel_rollback();
+    }
+  }
+}
+
+/* --- OTA Task --- */
 
 static void ota_task(void *pvParameter) {
   ota_task_args_t *args = (ota_task_args_t *)pvParameter;
@@ -44,9 +142,12 @@ static void ota_task(void *pvParameter) {
 
   // Perform HTTPS OTA Update
   esp_err_t ret = esp_https_ota(&ota_config);
+
+  // Record History
+  add_ota_history(args->version[0] ? args->version : "Manual", (ret == ESP_OK));
+
   if (ret == ESP_OK) {
     ESP_LOGI(TAG, "OTA Success! Rebooting...");
-
     vTaskDelay(pdMS_TO_TICKS(1000));
     esp_restart();
   } else {
@@ -70,6 +171,8 @@ esp_err_t app_ota_start(const char *url) {
 
   strncpy(args->url, url, sizeof(args->url) - 1);
   args->url[sizeof(args->url) - 1] = 0;
+  // If invoked manually via API, we might not have version.
+  strncpy(args->version, g_remote_version, sizeof(args->version) - 1);
 
   if (xTaskCreate(ota_task, "ota_task", 8192, args, 5, NULL) != pdPASS) {
     ESP_LOGE(TAG, "Failed to create OTA task");
@@ -144,6 +247,10 @@ static void auto_update_task(void *pvParameter) {
            PROJECT_VERSION, local_ver);
   ESP_LOGI(TAG, "Server URL: %s", CONFIG_OTA_SERVER_URL);
 
+  // Mark valid if we are running stable and connected
+  // Actually, wait until we are successfully checking versions loop to mark
+  // valid? Or handle in event handler.
+
   while (1) {
     if (!app_wifi_is_connected()) {
       ESP_LOGD(TAG, "Wi-Fi not connected, skipping OTA check");
@@ -156,7 +263,6 @@ static void auto_update_task(void *pvParameter) {
     struct tm timeinfo;
     time(&now);
     localtime_r(&now, &timeinfo);
-    ESP_LOGI(TAG, "Current Year: %d", timeinfo.tm_year + 1900);
     if (timeinfo.tm_year < (2020 - 1900)) {
       ESP_LOGW(TAG, "Time not synced yet (Year %d < 2020), waiting...",
                timeinfo.tm_year + 1900);

@@ -57,3 +57,25 @@ esp_err_t app_ac_send(void);
 #ifdef __cplusplus
 }
 #endif
+
+/**
+ * @brief Set custom AC brand by name.
+ *
+ * @param name Custom brand name
+ */
+void app_ac_set_custom_brand(const char *name);
+
+/**
+ * @brief Get current custom brand name.
+ *
+ * @return const char* Custom brand name or NULL if not custom
+ */
+const char* app_ac_get_custom_brand(void);
+
+/**
+ * @brief Check if current brand is custom.
+ *
+ * @return bool True if custom brand is active
+ */
+bool app_ac_is_custom_brand(void);
+

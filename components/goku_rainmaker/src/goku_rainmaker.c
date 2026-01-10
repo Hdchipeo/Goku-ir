@@ -2,7 +2,10 @@
 #include "goku_ac.h"
 #include "goku_data.h"
 #include "goku_ir_app.h"
+#include "goku_rainmaker.h"
+#if CONFIG_APP_LED_CONTROL
 #include "goku_led.h"
+#endif
 #include "goku_wifi.h"
 #include "ir_engine.h"
 #include <ctype.h>
@@ -16,17 +19,31 @@
 #include <string.h>
 
 static const char *TAG = "goku_rainmaker";
+#define PARAM_CUSTOM_BRAND_NAME "Custom Brand Name"
+#define PARAM_WEBUI_MODE "WebUI Config Mode"
+
 esp_rmaker_device_t *ac_device = NULL;
 esp_rmaker_device_t *led_device = NULL;
+static webui_toggle_cb_t s_webui_cb = NULL;
 
+void app_rainmaker_register_webui_toggle(webui_toggle_cb_t cb) {
+  s_webui_cb = cb;
+}
+
+#if CONFIG_APP_LED_CONTROL
 static bool g_power = false;
 static int g_hue = 0;
 static int g_saturation = 100;
 static int g_brightness = 100;
+#endif
+
+static char **g_brand_str_list = NULL;
+static size_t g_brand_list_count = 0;
 
 // Global AC State
 // Removed local state, using app_ac.h
 
+#if CONFIG_APP_LED_CONTROL
 static void hsv2rgb(uint16_t h, uint16_t s, uint16_t v, uint8_t *r, uint8_t *g,
                     uint8_t *b) {
   float H = h, S = s / 100.0, V = v / 100.0;
@@ -105,6 +122,7 @@ static esp_err_t led_write_cb(const esp_rmaker_device_t *device,
   esp_rmaker_param_update_and_report(param, val);
   return ESP_OK;
 }
+#endif
 
 /* Callback to handle write requests from the RainMaker App */
 static esp_err_t write_cb(const esp_rmaker_device_t *device,
@@ -116,6 +134,16 @@ static esp_err_t write_cb(const esp_rmaker_device_t *device,
              esp_rmaker_device_cb_src_to_str(ctx->src));
   }
   const char *param_name = esp_rmaker_param_get_name(param);
+
+  if (strcmp(param_name, PARAM_WEBUI_MODE) == 0) {
+    ESP_LOGI(TAG, "Received '%s' = %s", param_name,
+             val.val.b ? "true" : "false");
+    if (s_webui_cb) {
+      s_webui_cb(val.val.b);
+    }
+    esp_rmaker_param_update_and_report(param, val);
+    return ESP_OK;
+  }
 
   // Get current state
   ir_ac_state_t state;
@@ -174,6 +202,33 @@ static esp_err_t write_cb(const esp_rmaker_device_t *device,
       app_ac_set_brand(AC_BRAND_PANASONIC);
     else if (strcmp(val.val.s, "LG") == 0)
       app_ac_set_brand(AC_BRAND_LG);
+    else {
+      // Direct Custom Brand Selection
+      ESP_LOGI(TAG, "Selected Custom Brand: %s", val.val.s);
+
+      // Update hidden param for consistency
+      esp_rmaker_param_t *custom_p = esp_rmaker_device_get_param_by_name(
+          ac_device, PARAM_CUSTOM_BRAND_NAME);
+      if (custom_p) {
+        esp_rmaker_param_update_and_report(custom_p, esp_rmaker_str(val.val.s));
+      }
+
+      app_ac_set_custom_brand(val.val.s);
+    }
+    esp_rmaker_param_update_and_report(param, val);
+
+  } else if (strcmp(param_name, PARAM_CUSTOM_BRAND_NAME) == 0) {
+    ESP_LOGI(TAG, "Received '%s' = %s", param_name, val.val.s);
+    app_ac_set_custom_brand(val.val.s);
+
+    // Turn "Brand" param to this custom name if possible?
+    // Actually, if we just updated the valid list, maybe we should update
+    // "Brand" to this value.
+    esp_rmaker_param_t *brand_p =
+        esp_rmaker_device_get_param_by_name(ac_device, "Brand");
+    if (brand_p) {
+      esp_rmaker_param_update_and_report(brand_p, esp_rmaker_str(val.val.s));
+    }
     esp_rmaker_param_update_and_report(param, val);
   }
 
@@ -234,15 +289,29 @@ esp_err_t app_rainmaker_init(void) {
   esp_rmaker_param_t *brand_param = esp_rmaker_param_create(
       "Brand", ESP_RMAKER_PARAM_MODE, esp_rmaker_str("Daikin"),
       PROP_FLAG_READ | PROP_FLAG_WRITE);
-  static const char *brand_opts[] = {"Daikin", "Samsung", "Mitsubishi",
-                                     "Panasonic", "LG"};
-  esp_rmaker_param_add_valid_str_list(brand_param, brand_opts, 5);
+  static const char *brand_opts[] = {"Daikin",    "Samsung", "Mitsubishi",
+                                     "Panasonic", "LG",      "Custom"};
+  esp_rmaker_param_add_valid_str_list(brand_param, brand_opts, 6);
   esp_rmaker_param_add_ui_type(brand_param, ESP_RMAKER_UI_DROPDOWN);
   esp_rmaker_device_add_param(ac_device, brand_param);
+
+  /* Add Custom Brand Name (String) */
+  esp_rmaker_param_t *custom_brand_param = esp_rmaker_param_create(
+      PARAM_CUSTOM_BRAND_NAME, ESP_RMAKER_PARAM_NAME, esp_rmaker_str(""),
+      PROP_FLAG_READ | PROP_FLAG_WRITE);
+  esp_rmaker_device_add_param(ac_device, custom_brand_param);
+
+  /* Add WebUI Config Mode (Switch) */
+  esp_rmaker_param_t *webui_param = esp_rmaker_param_create(
+      PARAM_WEBUI_MODE, ESP_RMAKER_PARAM_POWER, esp_rmaker_bool(false),
+      PROP_FLAG_READ | PROP_FLAG_WRITE);
+  esp_rmaker_param_add_ui_type(webui_param, ESP_RMAKER_UI_TOGGLE);
+  esp_rmaker_device_add_param(ac_device, webui_param);
 
   /* Add AC device to node */
   esp_rmaker_node_add_device(node, ac_device);
 
+#if CONFIG_APP_LED_CONTROL
   /* Create a Lightbulb device (LED) */
   led_device = esp_rmaker_device_create("LED Control",
                                         ESP_RMAKER_DEVICE_LIGHTBULB, NULL);
@@ -271,6 +340,7 @@ esp_err_t app_rainmaker_init(void) {
 
   /* Add LED device to node */
   esp_rmaker_node_add_device(node, led_device);
+#endif
 
   /* Register callback */
   esp_rmaker_device_add_cb(ac_device, write_cb, NULL);
@@ -281,12 +351,165 @@ esp_err_t app_rainmaker_init(void) {
   return ESP_OK;
 }
 
-void app_rainmaker_update_state(bool power_on) {
-  if (ac_device) {
-    esp_rmaker_param_t *param = esp_rmaker_device_get_param_by_name(
-        ac_device, ESP_RMAKER_DEF_POWER_NAME);
-    if (param) {
-      esp_rmaker_param_update_and_report(param, esp_rmaker_bool(power_on));
+void app_rainmaker_update_state(const ir_ac_state_t *state) {
+  if (!ac_device || !state)
+    return;
+
+  // Power
+  esp_rmaker_param_update_and_report(
+      esp_rmaker_device_get_param_by_name(ac_device, ESP_RMAKER_DEF_POWER_NAME),
+      esp_rmaker_bool(state->power));
+
+  // Temp
+  esp_rmaker_param_update_and_report(
+      esp_rmaker_device_get_param_by_name(ac_device,
+                                          ESP_RMAKER_DEF_TEMPERATURE_NAME),
+      esp_rmaker_float((float)state->temp));
+
+  // Mode
+  const char *mode_str = "Auto";
+  switch (state->mode) {
+  case 0:
+    mode_str = "Auto";
+    break;
+  case 1:
+    mode_str = "Cool";
+    break;
+  case 2:
+    mode_str = "Heat";
+    break;
+  case 3:
+    mode_str = "Fan";
+    break;
+  case 4:
+    mode_str = "Dry";
+    break;
+  }
+  esp_rmaker_param_update_and_report(
+      esp_rmaker_device_get_param_by_name(ac_device, "Mode"),
+      esp_rmaker_str(mode_str));
+
+  // Fan
+  const char *fan_str = "Auto";
+  switch (state->fan) {
+  case 0:
+    fan_str = "Auto";
+    break;
+  case 1:
+    fan_str = "Low";
+    break;
+  case 2:
+    fan_str = "Medium";
+    break;
+  case 3:
+    fan_str = "High";
+    break;
+  }
+  esp_rmaker_param_update_and_report(
+      esp_rmaker_device_get_param_by_name(ac_device, "Fan Speed"),
+      esp_rmaker_str(fan_str));
+
+  // Brand
+  if (app_ac_is_custom_brand()) {
+    const char *name = app_ac_get_custom_brand();
+    if (name) {
+      // Update Brand Dropdown to show the custom name
+      esp_rmaker_param_update_and_report(
+          esp_rmaker_device_get_param_by_name(ac_device, "Brand"),
+          esp_rmaker_str(name));
+
+      // Also update the hidden/helper param
+      esp_rmaker_param_update_and_report(
+          esp_rmaker_device_get_param_by_name(ac_device,
+                                              PARAM_CUSTOM_BRAND_NAME),
+          esp_rmaker_str(name));
     }
+  } else {
+    const char *brand_str = "Daikin";
+    switch (app_ac_get_brand()) {
+    case AC_BRAND_DAIKIN:
+      brand_str = "Daikin";
+      break;
+    case AC_BRAND_SAMSUNG:
+      brand_str = "Samsung";
+      break;
+    case AC_BRAND_MITSUBISHI:
+      brand_str = "Mitsubishi";
+      break;
+    case AC_BRAND_PANASONIC:
+      brand_str = "Panasonic";
+      break;
+    case AC_BRAND_LG:
+      brand_str = "LG";
+      break;
+    default:
+      break;
+    }
+    esp_rmaker_param_update_and_report(
+        esp_rmaker_device_get_param_by_name(ac_device, "Brand"),
+        esp_rmaker_str(brand_str));
+  }
+}
+
+void app_rainmaker_update_custom_brands(char **brands, size_t count) {
+  if (!ac_device)
+    return;
+
+  esp_rmaker_param_t *brand_param =
+      esp_rmaker_device_get_param_by_name(ac_device, "Brand");
+  if (!brand_param)
+    return;
+
+  // 1. Allocate and Prepare New List
+  // Standard brands + Custom brands
+  const char *standard_brands[] = {"Daikin", "Samsung", "Mitsubishi",
+                                   "Panasonic", "LG"};
+  size_t std_count = 5;
+  size_t total_count = std_count + count;
+
+  char **new_list = malloc(total_count * sizeof(char *));
+  if (!new_list) {
+    ESP_LOGE(TAG, "Failed to allocate memory for brands list");
+    return;
+  }
+
+  // Copy standard brands
+  for (size_t i = 0; i < std_count; i++) {
+    new_list[i] = strdup(standard_brands[i]);
+  }
+
+  // Copy custom brands
+  for (size_t i = 0; i < count; i++) {
+    new_list[std_count + i] = strdup(brands[i]);
+  }
+
+  // 2. Capture Old List for Cleanup
+  char **old_list = g_brand_str_list;
+  size_t old_count = g_brand_list_count;
+
+  // 3. Update Global State
+  g_brand_str_list = new_list;
+  g_brand_list_count = total_count;
+
+  // 4. Update RainMaker Param
+  // RainMaker will now point to new_list.
+  // We needed to keep new_list allocated (which we do in global).
+  esp_err_t err = esp_rmaker_param_add_valid_str_list(
+      brand_param, (const char *const *)new_list, total_count);
+
+  if (err == ESP_OK) {
+    ESP_LOGI(TAG, "Updated RainMaker Brand list with %d items", total_count);
+    esp_rmaker_report_node_details();
+  } else {
+    ESP_LOGE(TAG, "Failed to update RainMaker Brand list");
+  }
+
+  // 5. Free Old List (Safe now)
+  if (old_list) {
+    for (size_t i = 0; i < old_count; i++) {
+      if (old_list[i])
+        free(old_list[i]);
+    }
+    free(old_list);
   }
 }
