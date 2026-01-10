@@ -1,10 +1,11 @@
 # Goku IR Device (ESP32-S3)
 
-**Goku IR Device** is an advanced smart home controller powered by the ESP32-S3. It transforms standard Air Conditioners into smart devices, controllable via a local web interface, the ESP RainMaker mobile app, or voice assistants. It also features a dynamic 8-LED ring for visual feedback and ambient lighting.
+**Goku IR Device** is an advanced smart home controller powered by the ESP32-S3. It transforms standard Air Conditioners into smart devices, controllable via a local web interface, the ESP RainMaker mobile app, or voice assistants. It features a new **Universal IR Engine** for broad AC compatibility and a dynamic 8-LED ring for visual feedback.
 
 ## 🌟 Key Features
 
 ### 🎮 Smart Control
+*   **Universal AC Engine**: Supports Daikin, Samsung, Mitsubishi, and generic NEC protocols via a registry-based system.
 *   **Local WebUI**: Full control via `http://gokuir.local` (or IP address).
     *   Control Power, Mode (Auto, Cool, Heat, Fan), and Temperature.
     *   Real-time Dashboard with device stats (Uptime, RSSI, Memory).
@@ -107,12 +108,18 @@ The device automatically checks for updates at boot and periodically from the UR
 ---
 
 ## 📂 Project Structure
-*   `main/app_led.c` - LED Effects Engine & Task.
-*   `main/app_ir.c` - IR RMT Driver (TX/RX) & Encoding.
-*   `main/app_web.c` - Web Server & API Handlers.
-*   `main/app_rainmaker.c` - Cloud Connectivity.
-*   `main/app_wifi.c` - Connection Manager.
-*   `main/app_ota.c` - Firmware Update Logic.
+
+This project follows a component-based architecture:
+
+*   **`components/goku_core`**: Core utilities (Logging `goku_log`, Memory `goku_mem`, Data/NVS `goku_data`).
+*   **`components/goku_peripherals`**: Hardware drivers (LED `goku_led`, Button `goku_button`).
+*   **`components/goku_wifi`**: Wi-Fi connection and mDNS (`goku_wifi`, `goku_mdns`).
+*   **`components/goku_ir`**: **Universal IR Engine**, Protocols, RMT Driver, and IR App logic.
+*   **`components/goku_web`**: Embedded Web Server and API handlers.
+*   **`components/goku_rainmaker`**: ESP RainMaker Cloud integration.
+*   **`components/goku_ac`**: High-level AC control state machine.
+*   **`components/goku_ota`**: OTA Update manager.
+*   **`main/`**: Application Entry point (`main.c`) and configuration.
 
 ## 📄 License
 This project is open-source. Feel free to modify and distribute.

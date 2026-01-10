@@ -7,17 +7,17 @@
 #include <freertos/task.h>
 #include <stdio.h>
 
-#include "app_button.h"
-#include "app_data.h"
-#include "app_ir.h"
-#include "app_led.h"
-#include "app_log.h"
-#include "app_mdns.h"
-#include "app_mem.h"
-#include "app_ota.h"
-#include "app_rainmaker.h"
-#include "app_web.h"
-#include "app_wifi.h"
+#include "goku_button.h"
+#include "goku_data.h"
+#include "goku_ir_app.h"
+#include "goku_led.h"
+#include "goku_log.h"
+#include "goku_mdns.h"
+#include "goku_mem.h"
+#include "goku_ota.h"
+#include "goku_rainmaker.h"
+#include "goku_web.h"
+#include "goku_wifi.h"
 
 // RainMaker headers
 #include <esp_rmaker_common_events.h>
