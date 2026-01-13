@@ -1,4 +1,4 @@
-# Goku IR Device (ESP32-S3)
+# Goku IR Device (ESP32)
 
 **Goku IR Device** is an advanced smart home controller powered by the ESP32-S3. It transforms standard Air Conditioners into smart devices, controllable via a local web interface, the ESP RainMaker mobile app, or voice assistants. It features a new **Universal IR Engine** for broad AC compatibility and a dynamic 8-LED ring for visual feedback.
 
