@@ -1,27 +1,35 @@
-# Goku IR Device v1.3.0
+# Goku IR Device v1.4.1
 
-**Goku IR Device** is an Advanced Agentic IoT controller powered by the ESP32-S3. It transforms standard Air Conditioners into smart devices, controllable via **ESP RainMaker**, Voice Assistants, and a local Web Interface.
+**Goku IR Device** is an Advanced Agentic IoT controller powered by ESP32-C3/S3. It transforms standard Air Conditioners into smart devices, controllable via **ESP RainMaker** (Android), **Apple HomeKit** (iOS), Voice Assistants, and a local Web Interface.
 
-## 🚀 What's New in v1.3.0
-*   **Refined Provisioning**: Streamlined BLE-based provisioning via ESP RainMaker App.
-*   **Web UI Toggle**: The local Web Interface (`http://gokuir.local`) is now **OFF by default** for security and performance. Enable it anytime via the "WebUI Config Mode" switch in the RainMaker App.
-*   **OTA Hardening**: Enhanced Over-The-Air updates with automatic rollback on failure and update history tracking.
-*   **UI/UX Improvements**: "WebUI Config Mode" is now a proper Toggle Switch, and LED effects are smoother.
-*   **Universal IR Engine**: Improved compatibility for Daikin, Samsung, LG, and more.
+## 🚀 What's New in v1.4.x
+
+*   **Dual Platform Support**: Android (RainMaker) and iOS (HomeKit) with selectable configuration.
+*   **HomeKit Integration**: Native Apple Home app control with Thermostat, Temperature/Humidity sensors.
+*   **AHT20 Sensor Support**: Optional temperature and humidity monitoring (configurable via menuconfig).
+*   **Captive Portal**: iOS SoftAP provisioning with auto-popup trigger (DHCP Option 114).
+*   **Sensor Display Fix**: Temperature/humidity rounded to 1 decimal place for cleaner display.
+*   **State Restore**: AC state automatically restored in RainMaker/HomeKit after reboot.
+*   **Log Optimization**: Reduced console spam from RainMaker parameter updates.
+*   **ESP32-S3 PSRAM Fix**: Proper memory monitoring for PSRAM-enabled boards.
 
 ---
 
 ## 🌟 Key Features
 
 ### 🎮 Smart Control
-*   **ESP RainMaker Integration**: Full cloud control via iOS/Android App.
-    *   Power, Mode, Temp, Fan Speed.
-    *   **WebUI Config Mode Toggle**.
+*   **Dual Platform**:
+    *   **Android**: ESP RainMaker cloud control via iOS/Android App.
+    *   **iOS**: Native HomeKit integration via Apple Home app.
 *   **Universal AC Engine**: Built-in support for major brands (Daikin, Samsung, Mitsubishi, Panasonic, LG) + Custom Learning.
 *   **Local Web Interface** (when enabled):
     *   Advanced Configuration & Stats.
     *   IR Learning Dashboard.
     *   LED Effect Customization.
+
+### 🌡 Sensors
+*   **AHT20 Support**: Optional I2C temperature/humidity sensor.
+*   **RainMaker/HomeKit Integration**: Sensor data displayed in cloud dashboard.
 
 ### 🌈 LED Control
 *   **Dynamic Effects**: Rainbow, Breathing, Fire, Sparkle, and more.
@@ -32,8 +40,8 @@
     *   **Yellow/Red**: Factory Reset / Error.
 
 ### 🛡 Reliability
-*   **Robust OTA**: Dual-partition update system with auto-rollback if the new firmware fails to boot.
-*   **OTA History**: Tracks recent update attempts (Success/Fail) in NVS.
+*   **Robust OTA**: Dual-partition update system with auto-rollback.
+*   **State Persistence**: AC settings saved to NVS, restored on reboot.
 
 ---
 
@@ -41,89 +49,83 @@
 
 | Component | Default GPIO | Notes |
 | :--- | :--- | :--- |
-| **IR Transmitter** | GPIO 8 | Controls AC |
-| **IR Receiver** | GPIO 9 | For Learning Mode |
-| **RGB LED** | GPIO 2 | WS2812B / SK6812 |
+| **IR Transmitter** | GPIO 4 | Controls AC |
+| **IR Receiver** | GPIO 7 | For Learning Mode |
+| **RGB LED** | GPIO 8 | WS2812B / SK6812 |
 | **Button** | GPIO 3 | Factory Reset (Long Press 3s) |
+| **AHT20 SDA** | GPIO 5 | I2C (Optional Sensor) |
+| **AHT20 SCL** | GPIO 6 | I2C (Optional Sensor) |
+
+*GPIOs are configurable via `idf.py menuconfig` -> Hardware Configuration.*
 
 ---
 
 ## 📲 Provisioning Guide
 
-**Note:** This firmware supports **ESP RainMaker Provisioning (BLE)** only. SoftAP provisioning is NOT supported in this release.
+### Android (ESP RainMaker)
+1.  Download **ESP RainMaker** app.
+2.  Power on device (LED breathes **Cyan**).
+3.  Add Device -> Scan QR Code or Manual Pairing.
+4.  Select `PROV_XXXXXX` via Bluetooth, enter Wi-Fi credentials.
+5.  LED turns **Solid Blue** when connected.
 
-1.  **Install App**: Download **ESP RainMaker** for iOS or Android.
-2.  **Power On**: The device LED should breathe **Cyan**.
-3.  **Add Device**:
-    *   Open App -> Add Device.
-    *   Scan the QR Code (from Serial Monitor) OR select "I don't have a QR code" -> **Manual Pairing**.
-    *   Select device named `PROV_XXXXXX` (via Bluetooth).
-4.  **Connect**: Enter your Wi-Fi credentials in the App.
-5.  **Done**: The LED turns **Solid Blue** upon connection.
+### iOS (HomeKit + Captive Portal)
+1.  Power on device (LED breathes **Cyan**).
+2.  Connect to `GokuAC_XXXX` WiFi network.
+3.  Captive portal auto-opens for WiFi configuration.
+4.  After WiFi connection, add device in Apple Home app using the pairing code displayed in Serial Monitor.
 
 ---
 
 ## 🌐 Web Interface
 
-By default, the Web UI is **DISABLED** to save resources.
+The Web UI is **DISABLED by default** to save resources.
 
-**To Enable:**
+**To Enable (Android):**
 1.  Open ESP RainMaker App.
-2.  Toggle **"WebUI Config Mode"** to **ON**.
-3.  Visit `http://gokuir.local` (or device IP) in your browser.
+2.  Toggle **"WebUI Config Mode"** to ON.
+3.  Visit `http://gokuac.local:8080` in browser.
 
-**To Disable:**
-1.  Toggle **"WebUI Config Mode"** to **OFF**.
-
----
-
-## 🔄 Firmware Updates (OTA)
-
-The device supports Over-The-Air updates.
-*   **Automatic**: Checks for updates at boot from the configured server.
-*   **Manual Trigger**: Can be triggered via CLI (if enabled).
-*   **Rollback**: If a bad update is flashed, the device automatically reverts to the previous working version after reboot.
+**To Enable (iOS):**
+*   Web UI is available at `http://gokuac.local:8080` when connected to the same network.
 
 ---
 
-## 📂 Project Structure & Workflows
+## 📂 Project Components
 
-### `/components`
-*   **`goku_core`**: System utilities (Logging, Memory monitoring, NVS).
-*   **`goku_wifi`**: Wi-Fi manager & Provisioning logic (`network_provisioning`).
-*   **`goku_rainmaker`**: Cloud integration (Parameters, Callbacks).
-*   **`goku_web`**: HTTP Server & API (only runs when toggled).
-*   **`goku_ir`**: RMT Driver & Protocol Logic.
-*   **`goku_ota`**: Update manager & Rollback logic.
-
-### `/main`
-*   **`main.c`**: Application Entry Point. Orchestrates initialization of all components.
-*   **`Kconfig.projbuild`**: Project-level configuration options (GPIOs, URLs).
-
-### `/firmware`
-*   Contains release binaries (`.bin`) for flashing.
+| Component | Description |
+| :--- | :--- |
+| **`goku_core`** | System utilities, memory monitoring, NVS |
+| **`goku_wifi`** | Wi-Fi manager, mDNS, provisioning |
+| **`goku_rainmaker`** | Cloud integration (Android) |
+| **`goku_homekit`** | Apple HomeKit integration (iOS) |
+| **`goku_sensor`** | AHT20 temperature/humidity driver |
+| **`goku_wifi_portal`** | Captive portal for iOS provisioning |
+| **`goku_web`** | HTTP Server & API |
+| **`goku_ir`** | RMT Driver & IR Protocol Logic |
+| **`goku_ota`** | Update manager & Rollback |
 
 ---
 
-## 📦 Flashing Firmware
+## 📦 Build & Flash
 
-**Pre-built Binaries (v1.3.0)** are located in `firmware/v1.3.0/`.
-
-**Command Line:**
 ```bash
-# Erase Flash (Recommended for major version jumps)
-idf.py -p PORT erase_flash
+# Set target
+idf.py set-target esp32c3  # or esp32s3
+
+# Configure (optional - select platform, sensors, GPIOs)
+idf.py menuconfig
+
+# Build
+idf.py build
 
 # Flash & Monitor
 idf.py -p PORT flash monitor
 ```
 
-**Build from Source:**
-```bash
-idf.py set-target esp32c3  # or esp32s3
-idf.py build
-idf.py flash monitor
-```
+**Platform Selection** (in menuconfig):
+- `Mobile Platform` -> Android (RainMaker) or iOS (HomeKit)
+- `Sensors` -> Enable AHT20 if connected
 
 ---
 
