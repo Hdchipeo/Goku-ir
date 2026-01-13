@@ -1,6 +1,7 @@
 #include "goku_ota.h"
 #include "cJSON.h"
 #include "esp_crt_bundle.h"
+#include "esp_heap_caps.h"
 #include "esp_http_client.h"
 #include "esp_https_ota.h"
 #include "esp_log.h"
@@ -124,21 +125,43 @@ void app_ota_mark_valid(void) {
 static void ota_task(void *pvParameter) {
   ota_task_args_t *args = (ota_task_args_t *)pvParameter;
   ESP_LOGI(TAG, "Starting OTA task with URL: %s", args->url);
+
+  // Log heap status before OTA
+  size_t free_heap = heap_caps_get_free_size(MALLOC_CAP_8BIT);
+  size_t largest_block = heap_caps_get_largest_free_block(MALLOC_CAP_8BIT);
+  ESP_LOGI(TAG, "Heap before OTA: Free=%zu, Largest Block=%zu", free_heap,
+           largest_block);
+
+  // Lowered threshold: without cert verification, TLS needs ~10-15KB
+  if (largest_block < 10000) {
+    ESP_LOGE(TAG,
+             "Insufficient heap for OTA! Need at least 10KB contiguous block");
+    free(args);
+    vTaskDelete(NULL);
+    return;
+  }
+
   app_led_set_state(APP_LED_OTA);
 
+  // Minimal buffer settings for low-memory OTA
+  // Skip certificate verification to reduce TLS heap usage
+  // Note: HTTPS still encrypts data, but doesn't verify server identity
   esp_http_client_config_t config = {
       .url = args->url,
-      .crt_bundle_attach = esp_crt_bundle_attach,
+      .crt_bundle_attach = NULL, // Skip cert verification (saves ~30KB heap)
       .keep_alive_enable = false,
-      .skip_cert_common_name_check = true, // Optional: relax checks for testing
-      .buffer_size = 8192,
-      .buffer_size_tx = 4096,
+      .skip_cert_common_name_check = true,
+      .buffer_size = 2048,    // Minimal buffer
+      .buffer_size_tx = 1024, // Minimal buffer
       .timeout_ms = 60000,
   };
 
   esp_https_ota_config_t ota_config = {
       .http_config = &config,
   };
+
+  ESP_LOGW(TAG,
+           "Starting OTA without certificate verification (low memory mode)");
 
   // Perform HTTPS OTA Update
   esp_err_t ret = esp_https_ota(&ota_config);
@@ -190,6 +213,18 @@ static int parse_version(const char *version_str) {
 }
 
 esp_err_t app_ota_check_version(char *out_remote_version, size_t buf_len) {
+  // Check if time is synced before making HTTPS request
+  // TLS certificate validation requires correct system time
+  time_t now;
+  struct tm timeinfo;
+  time(&now);
+  localtime_r(&now, &timeinfo);
+  if (timeinfo.tm_year < (2020 - 1900)) {
+    ESP_LOGW(TAG, "Time not synced (Year %d), cannot verify TLS certificate",
+             timeinfo.tm_year + 1900);
+    return ESP_ERR_INVALID_STATE;
+  }
+
   char url[256];
   snprintf(url, sizeof(url), "%s/version.txt", CONFIG_OTA_SERVER_URL);
 

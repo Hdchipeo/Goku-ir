@@ -1,4 +1,7 @@
-#include "goku_rainmaker.h"
+#include "sdkconfig.h"
+
+#if CONFIG_GOKU_PLATFORM_ANDROID
+
 #include "goku_ac.h"
 #include "goku_data.h"
 #include "goku_ir_app.h"
@@ -9,6 +12,11 @@
 #include "goku_wifi.h"
 #include "ir_engine.h"
 #include <ctype.h>
+
+#if CONFIG_GOKU_SENSOR_AHT20
+#include "aht20_sensor.h"
+#endif
+
 #include <esp_log.h>
 #include <esp_rmaker_core.h>
 #include <esp_rmaker_schedule.h>
@@ -123,6 +131,42 @@ static esp_err_t led_write_cb(const esp_rmaker_device_t *device,
   return ESP_OK;
 }
 #endif
+
+#if CONFIG_GOKU_SENSOR_AHT20
+static void sensor_update_task(void *arg) {
+  while (1) {
+    float temp = 0.0f;
+    float hum = 0.0f;
+    if (aht20_sensor_read(&temp, &hum) == ESP_OK) {
+      // Round to 1 decimal place for cleaner display
+      float temp_rounded = roundf(temp * 10.0f) / 10.0f;
+      float hum_rounded = roundf(hum * 10.0f) / 10.0f;
+
+      esp_rmaker_param_update_and_report(
+          esp_rmaker_device_get_param_by_type(
+              esp_rmaker_node_get_device_by_name(esp_rmaker_get_node(),
+                                                 "Temperature"),
+              ESP_RMAKER_PARAM_TEMPERATURE),
+          esp_rmaker_float(temp_rounded));
+
+      esp_rmaker_param_update_and_report(
+          esp_rmaker_device_get_param_by_name(
+              esp_rmaker_node_get_device_by_name(esp_rmaker_get_node(),
+                                                 "Humidity"),
+              "Humidity"),
+          esp_rmaker_float(hum_rounded));
+    }
+    vTaskDelay(pdMS_TO_TICKS(5000));
+  }
+  vTaskDelete(NULL);
+}
+#endif
+
+// Forward declaration
+static esp_err_t write_cb(const esp_rmaker_device_t *device,
+                          const esp_rmaker_param_t *param,
+                          const esp_rmaker_param_val_t val, void *priv_data,
+                          esp_rmaker_write_ctx_t *ctx);
 
 /* Callback to handle write requests from the RainMaker App */
 static esp_err_t write_cb(const esp_rmaker_device_t *device,
@@ -311,35 +355,38 @@ esp_err_t app_rainmaker_init(void) {
   /* Add AC device to node */
   esp_rmaker_node_add_device(node, ac_device);
 
+// 4. Create LED Device (Optional)
 #if CONFIG_APP_LED_CONTROL
-  /* Create a Lightbulb device (LED) */
-  led_device = esp_rmaker_device_create("LED Control",
-                                        ESP_RMAKER_DEVICE_LIGHTBULB, NULL);
-
-  /* Add Power (Standard) */
-  esp_rmaker_device_add_param(
-      led_device,
-      esp_rmaker_power_param_create(ESP_RMAKER_DEF_POWER_NAME, false));
-
-  /* Add Hue (Standard) */
-  esp_rmaker_device_add_param(
-      led_device, esp_rmaker_hue_param_create(ESP_RMAKER_DEF_HUE_NAME, 0));
-
-  /* Add Saturation (Standard) */
-  esp_rmaker_device_add_param(
-      led_device,
-      esp_rmaker_saturation_param_create(ESP_RMAKER_DEF_SATURATION_NAME, 100));
-
-  /* Add Brightness (Standard) */
-  esp_rmaker_device_add_param(
-      led_device,
-      esp_rmaker_brightness_param_create(ESP_RMAKER_DEF_BRIGHTNESS_NAME, 100));
-
-  /* Register callback */
+  led_device = esp_rmaker_lightbulb_device_create("LED", NULL, NULL);
   esp_rmaker_device_add_cb(led_device, led_write_cb, NULL);
-
-  /* Add LED device to node */
+  esp_rmaker_device_add_param(
+      led_device, esp_rmaker_brightness_param_create("Brightness", 100));
+  esp_rmaker_device_add_param(led_device,
+                              esp_rmaker_hue_param_create("Hue", 0));
+  esp_rmaker_device_add_param(
+      led_device, esp_rmaker_saturation_param_create("Saturation", 100));
   esp_rmaker_node_add_device(node, led_device);
+#endif
+
+// 5. Create Sensor Device (Optional)
+#if CONFIG_GOKU_SENSOR_AHT20
+  esp_rmaker_device_t *temp_device =
+      esp_rmaker_temp_sensor_device_create("Temperature", NULL, 0.0f);
+  esp_rmaker_node_add_device(node, temp_device);
+
+  esp_rmaker_device_t *hum_device =
+      esp_rmaker_device_create("Humidity", "esp.device.humidity-sensor", NULL);
+  esp_rmaker_device_add_param(
+      hum_device,
+      esp_rmaker_name_param_create(ESP_RMAKER_DEF_NAME_PARAM, "Humidity"));
+  esp_rmaker_device_add_param(
+      hum_device,
+      esp_rmaker_param_create("Humidity", ESP_RMAKER_PARAM_RANGE,
+                              esp_rmaker_float(0.0f), PROP_FLAG_READ));
+  esp_rmaker_node_add_device(node, hum_device);
+
+  // Start task to update sensors
+  xTaskCreate(sensor_update_task, "sensor_update", 4096, NULL, 5, NULL);
 #endif
 
   /* Register callback */
@@ -347,6 +394,13 @@ esp_err_t app_rainmaker_init(void) {
 
   /* Start RainMaker */
   esp_rmaker_start();
+
+  // Restore AC state from NVS after RainMaker starts (like HomeKit)
+  ir_ac_state_t current_state;
+  app_ac_get_state(&current_state);
+  app_rainmaker_update_state(&current_state);
+  ESP_LOGI(TAG, "Restored AC state to RainMaker: Power=%d, Temp=%d, Mode=%d",
+           current_state.power, current_state.temp, current_state.mode);
 
   return ESP_OK;
 }
@@ -495,7 +549,7 @@ void app_rainmaker_update_custom_brands(char **brands, size_t count) {
   // RainMaker will now point to new_list.
   // We needed to keep new_list allocated (which we do in global).
   esp_err_t err = esp_rmaker_param_add_valid_str_list(
-      brand_param, (const char *const *)new_list, total_count);
+      brand_param, (const char **)new_list, total_count);
 
   if (err == ESP_OK) {
     ESP_LOGI(TAG, "Updated RainMaker Brand list with %d items", total_count);
@@ -513,3 +567,5 @@ void app_rainmaker_update_custom_brands(char **brands, size_t count) {
     free(old_list);
   }
 }
+
+#endif /* CONFIG_GOKU_PLATFORM_ANDROID */

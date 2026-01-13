@@ -16,15 +16,11 @@ static void app_mem_task(void *pvParameters) {
         heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
 #ifndef CONFIG_IDF_TARGET_ESP32C3
     size_t free_psram = heap_caps_get_free_size(MALLOC_CAP_SPIRAM);
-#else
-    size_t free_psram = 0;
 #endif
-    size_t min_internal =
-        heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
 
-    ESP_LOGI(TAG, "Memory Stats - Internal: %u B (Min: %u B), PSRAM: %u B",
-             (unsigned int)free_internal, (unsigned int)min_internal,
-             (unsigned int)free_psram);
+    // Memory stats log suppressed to reduce spam
+    // ESP_LOGI(TAG, "Memory Stats - Internal: %u B, PSRAM: %u B",
+    //          (unsigned int)free_internal, (unsigned int)free_psram);
 
     if (free_internal < INTERNAL_HEAP_CRITICAL_THRESHOLD) {
       ESP_LOGW(TAG, "Internal heap is running low!");

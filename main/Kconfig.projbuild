@@ -40,6 +40,58 @@ menu "Hardware Configuration"
 
 endmenu
 
+
+menu "Sensors"
+
+    config GOKU_SENSOR_AHT20
+        bool "Enable AHT20 Temperature & Humidity Sensor"
+        default n
+        help
+            Enable support for AHT20 sensor.
+            Adds sensor readings to RainMaker, HomeKit, and Web UI.
+            Requires I2C connection.
+
+    config APP_I2C_SDA
+        int "I2C SDA GPIO"
+        default 6
+        depends on GOKU_SENSOR_AHT20
+        help
+            GPIO number for I2C SDA line.
+
+    config APP_I2C_SCL
+        int "I2C SCL GPIO"
+        default 5
+        depends on GOKU_SENSOR_AHT20
+        help
+            GPIO number for I2C SCL line.
+
+endmenu
+
+menu "Mobile Platform"
+
+    choice GOKU_MOBILE_PLATFORM
+        prompt "Platform Selection"
+        default GOKU_PLATFORM_ANDROID
+        help
+            Select the target mobile platform ecosystem.
+            This selection is MUTUALLY EXCLUSIVE.
+
+        config GOKU_PLATFORM_ANDROID
+            bool "Android (ESP RainMaker)"
+            select ESP_RAINMAKER_ENABLE     # Virtual logic flag if needed
+            help
+                Build for Android. Enables ESP RainMaker cloud provisioning
+                and control. Disables HomeKit.
+
+        config GOKU_PLATFORM_IOS
+            bool "iOS (Apple HomeKit)"
+            help
+                Build for iOS. Enables Apple HomeKit Accessory integration.
+                Disables RainMaker.
+    endchoice
+
+endmenu
+
 menu "WiFi Configuration"
 
     choice APP_PROV_TRANSPORT_METHOD
@@ -99,5 +151,50 @@ menu "OTA Configuration"
         default 3600
         help
             How often to check for updates in seconds.
+
+endmenu
+
+menu "iOS WiFi Provisioning"
+    depends on GOKU_PLATFORM_IOS
+    
+    config IOS_WIFI_PROV_AP_ENABLE
+        bool "Enable SoftAP WiFi Provisioning for iOS"
+        default y
+        help
+            Enable captive portal provisioning via SoftAP for iOS devices.
+            When enabled, device will start a temporary WiFi Access Point
+            on first boot or when no WiFi credentials are stored.
+            
+    config IOS_WIFI_AP_SSID_PREFIX
+        string "SoftAP SSID Prefix"
+        default "Goku-Setup"
+        depends on IOS_WIFI_PROV_AP_ENABLE
+        help
+            Prefix for the temporary WiFi AP name.
+            Full SSID will be: PREFIX-MACADDR (e.g., Goku-Setup-ABCD)
+            
+    config IOS_WIFI_AP_PASSWORD
+        string "SoftAP Password (leave empty for open network)"
+        default ""
+        depends on IOS_WIFI_PROV_AP_ENABLE
+        help
+            Password for the temporary WiFi AP.
+            Leave empty for an open network (recommended for easy setup).
+            
+    config IOS_WIFI_AP_CHANNEL
+        int "SoftAP WiFi Channel"
+        default 1
+        range 1 13
+        depends on IOS_WIFI_PROV_AP_ENABLE
+        help
+            WiFi channel for the temporary AP (1-13).
+            
+    config IOS_WIFI_AP_MAX_CONNECTIONS
+        int "Maximum SoftAP Connections"
+        default 4
+        range 1 10
+        depends on IOS_WIFI_PROV_AP_ENABLE
+        help
+            Maximum number of devices that can connect to the AP simultaneously.
 
 endmenu

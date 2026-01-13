@@ -21,6 +21,7 @@
 #include "nvs_flash.h"
 #include <stdio.h>
 #include <sys/stat.h>
+#include <time.h>
 
 #define TAG "goku_web"
 #define MOUNT_POINT "/www"
@@ -154,7 +155,9 @@ static esp_err_t api_ac_control_handler(httpd_req_t *req) {
 
   app_ac_set_state(&state);
   app_ac_send();
+#if CONFIG_GOKU_PLATFORM_ANDROID
   app_rainmaker_update_state(&state);
+#endif
 
   cJSON_Delete(json);
   httpd_resp_send(req, "OK", 2);
@@ -179,6 +182,45 @@ static esp_err_t api_ac_state_handler(httpd_req_t *req) {
 
   cJSON_Delete(root);
   free(str);
+  return ESP_OK;
+}
+
+/**
+ * @brief Get full AC state including brand and custom brand info
+ * This is used by WebUI to restore state on page load
+ */
+static esp_err_t api_ac_full_state_handler(httpd_req_t *req) {
+  cJSON *root = cJSON_CreateObject();
+
+  // Get brand info
+  ac_brand_t brand = app_ac_get_brand();
+  bool is_custom = app_ac_is_custom_brand();
+  const char *custom_name = app_ac_get_custom_brand();
+
+  cJSON_AddNumberToObject(root, "brand", (int)brand);
+  cJSON_AddBoolToObject(root, "is_custom", is_custom);
+  if (is_custom && custom_name) {
+    cJSON_AddStringToObject(root, "custom_brand_name", custom_name);
+  }
+
+  // Get AC state
+  ir_ac_state_t state;
+  app_ac_get_state(&state);
+  cJSON *state_obj = cJSON_CreateObject();
+  cJSON_AddBoolToObject(state_obj, "power", state.power);
+  cJSON_AddNumberToObject(state_obj, "mode", state.mode);
+  cJSON_AddNumberToObject(state_obj, "temp", state.temp);
+  cJSON_AddNumberToObject(state_obj, "fan", state.fan);
+  cJSON_AddNumberToObject(state_obj, "swing_v", state.swing_v);
+  cJSON_AddNumberToObject(state_obj, "swing_h", state.swing_h);
+  cJSON_AddItemToObject(root, "state", state_obj);
+
+  char *json_str = cJSON_PrintUnformatted(root);
+  httpd_resp_set_type(req, "application/json");
+  httpd_resp_sendstr(req, json_str);
+
+  free(json_str);
+  cJSON_Delete(root);
   return ESP_OK;
 }
 
@@ -329,8 +371,18 @@ static esp_err_t api_rename_handler(httpd_req_t *req) {
 
 static esp_err_t api_ota_check_handler(httpd_req_t *req) {
   char remote_ver_str[32] = {0};
-  char response[128];
+  char response[256];
   bool available = false;
+  bool time_synced = true;
+
+  // Check if time is synced (required for TLS certificate validation)
+  time_t now;
+  struct tm timeinfo;
+  time(&now);
+  localtime_r(&now, &timeinfo);
+  if (timeinfo.tm_year < (2020 - 1900)) {
+    time_synced = false;
+  }
 
   // Optimistic check. If logic fails or server is down, we handle it.
   // Return local cached status to avoid blocking the Web Server thread
@@ -342,8 +394,10 @@ static esp_err_t api_ota_check_handler(httpd_req_t *req) {
   app_ota_trigger_check();
 
   snprintf(response, sizeof(response),
-           "{\"current\":\"%s\", \"latest\":\"%s\", \"available\":%s}",
-           PROJECT_VERSION, remote_ver_str, available ? "true" : "false");
+           "{\"current\":\"%s\", \"latest\":\"%s\", \"available\":%s, "
+           "\"time_synced\":%s}",
+           PROJECT_VERSION, remote_ver_str, available ? "true" : "false",
+           time_synced ? "true" : "false");
 
   httpd_resp_set_type(req, "application/json");
   httpd_resp_send(req, response, HTTPD_RESP_USE_STRLEN);
@@ -848,7 +902,9 @@ static void update_rainmaker_brands() {
     }
   }
 
+#if CONFIG_GOKU_PLATFORM_ANDROID
   app_rainmaker_update_custom_brands(brand_list, count);
+#endif
 
   if (brand_list)
     free(brand_list);
@@ -1182,6 +1238,7 @@ esp_err_t app_web_start(void) {
   httpd_config_t config = HTTPD_DEFAULT_CONFIG();
   config.max_uri_handlers = 30; // 27 total handlers needed
   config.stack_size = 10240;
+  config.server_port = 8080; // Use 8080 to avoid conflict with HomeKit HAP (80)
   config.uri_match_fn = httpd_uri_match_wildcard; // Enable wildcard matching
 
   ESP_LOGI(TAG, "Starting HTTP Server...");
@@ -1234,6 +1291,14 @@ esp_err_t app_web_start(void) {
 #endif
     REG_URI(&ac_control);
     REG_URI(&ac_state);
+
+    // Full state endpoint (includes brand info)
+    static const httpd_uri_t ac_full_state = {.uri = "/api/ac/full_state",
+                                              .method = HTTP_GET,
+                                              .handler =
+                                                  api_ac_full_state_handler};
+    REG_URI(&ac_full_state);
+
     REG_URI(&system_logs);
     REG_URI(&system_logs_clear);
 

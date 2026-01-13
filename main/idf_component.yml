@@ -1,5 +1,8 @@
 dependencies:
-  espressif/led_strip: "^3.0.0"
-  espressif/button: "^3.2.0"
-  espressif/esp_rainmaker: "^1.0.0"
+  espressif/led_strip: ^3.0.0
+  espressif/button: ^3.2.0
+  espressif/esp_rainmaker: ^1.0.0
+  78/esp-wifi-connect: ^3.0.2
 
+  espressif/aht20: ^2.0.0
+  espressif/qrcode: ^0.1.0

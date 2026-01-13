@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="theme-color" content="#F2F2F7">
+    <title>Goku Setup</title>
+    <style>
+        /* Apple-style Design System */
+        :root {
+            --bg-color: #F2F2F7;
+            --card-bg: #FFFFFF;
+            --text-primary: #1C1C1E;
+            --text-secondary: #8E8E93;
+            --accent-color: #007AFF;
+            --separator: #C6C6C8;
+            --danger: #FF3B30;
+            --touch-highlight: rgba(0, 0, 0, 0.05);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-color: #000000;
+                --card-bg: #1C1C1E;
+                --text-primary: #FFFFFF;
+                --text-secondary: #8E8E93;
+                --accent-color: #0A84FF;
+                --separator: #38383A;
+                --touch-highlight: rgba(255, 255, 255, 0.1);
+            }
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            -webkit-font-smoothing: antialiased;
+            display: flex;
+            justify-content: center;
+            /* Safe Area Support */
+            padding-top: env(safe-area-inset-top, 20px);
+            padding-bottom: env(safe-area-inset-bottom, 20px);
+            padding-left: env(safe-area-inset-left, 0);
+            padding-right: env(safe-area-inset-right, 0);
+            min-height: 100vh;
+            box-sizing: border-box;
+            /* Prevent rubber-banding on body */
+            overscroll-behavior-y: none;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 480px;
+            /* Typical mobile width */
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        h1 {
+            font-size: 34px;
+            font-weight: 700;
+            margin: 20px 0 20px 12px;
+            letter-spacing: -0.5px;
+        }
+
+        h2 {
+            font-size: 13px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            margin: 0 0 8px 16px;
+            font-weight: 400;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 30px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        .network-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .network-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            position: relative;
+            /* Ensure plenty of touch area */
+            min-height: 48px;
+            box-sizing: border-box;
+            /* Remove tap highlight color on mobile */
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .network-item:active {
+            background-color: var(--touch-highlight);
+        }
+
+        .network-item:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 16px;
+            right: 0;
+            height: 0.5px;
+            background-color: var(--separator);
+        }
+
+        .ssid-name {
+            font-size: 17px;
+            font-weight: 400;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 70%;
+        }
+
+        .signal-icon {
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .wifi-bars {
+            display: inline-block;
+            width: 20px;
+            text-align: right;
+            margin-right: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            letter-spacing: -2px;
+        }
+
+        .wifi-weak {
+            color: #ff3b30;
+        }
+
+        .wifi-fair {
+            color: #ffcc00;
+        }
+
+        .wifi-good {
+            color: var(--text-primary);
+        }
+
+        .chevron {
+            color: #C7C7CC;
+            width: 8px;
+            height: 13px;
+            opacity: 0.7;
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            border: 3px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top: 3px solid var(--text-secondary);
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            margin: 30px auto;
+            display: none;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .spinner {
+                border: 3px solid rgba(255, 255, 255, 0.1);
+                border-top: 3px solid var(--text-secondary);
+            }
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Modal Overlay */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.4);
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            padding: 20px;
+            /* Prevent edge touching */
+        }
+
+        .modal-content {
+            background-color: var(--card-bg);
+            width: 100%;
+            max-width: 300px;
+            /* Keep it focused */
+            border-radius: 14px;
+            text-align: center;
+            overflow: hidden;
+            animation: popUp 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        @keyframes popUp {
+            from {
+                transform: scale(0.95);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            padding: 24px 24px 16px;
+        }
+
+        .modal-title {
+            font-size: 17px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .modal-subtitle {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        .modal-body {
+            padding: 0 24px 24px;
+        }
+
+        input[type="password"],
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            /* Large touch area */
+            border: 1px solid var(--separator);
+            border-radius: 8px;
+            font-size: 16px;
+            /* Prevents auto-zoom on iOS */
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            box-sizing: border-box;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input:focus {
+            border-color: var(--accent-color);
+        }
+
+        .modal-footer {
+            display: flex;
+            border-top: 0.5px solid var(--separator);
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 16px;
+            /* Tappable height */
+            border: none;
+            background: none;
+            font-size: 17px;
+            cursor: pointer;
+            -webkit-appearance: none;
+            -webkit-tap-highlight-color: rgba(0, 0, 0, 0.05);
+            transition: background-color 0.1s;
+        }
+
+        .modal-btn:active {
+            background-color: var(--touch-highlight);
+        }
+
+        .btn-cancel {
+            color: var(--accent-color);
+            border-right: 0.5px solid var(--separator);
+        }
+
+        .btn-join {
+            color: var(--accent-color);
+            font-weight: 600;
+        }
+
+        .btn-join:disabled {
+            color: var(--text-secondary);
+            opacity: 0.5;
+        }
+
+        /* Success Message */
+        .toast {
+            position: fixed;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(50, 50, 50, 0.9);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 24px;
+            font-size: 15px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            z-index: 2000;
+            text-align: center;
+            max-width: 80%;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .toast {
+                background-color: rgba(255, 255, 255, 0.9);
+                color: black;
+            }
+        }
+
+        .toast.show {
+            opacity: 1;
+        }
+
+        /* Utility for touch */
+        .touch-feedback:active {
+            opacity: 0.6;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>Settings</h1>
+
+        <h2>Wi-Fi Networks</h2>
+        <div class="card">
+            <div id="loading" class="spinner" style="display: block;"></div>
+            <div id="error-msg"
+                style="padding: 30px; text-align: center; color: var(--text-secondary); display: none; line-height: 1.5;">
+                No networks found.<br><span style="color:var(--accent-color); font-weight:500;">Tap to retry</span>
+            </div>
+            <ul id="network-list" class="network-list">
+                <!-- Items injected by JS -->
+            </ul>
+            <!-- Manual Add Option -->
+            <div class="network-item" onclick="openModal('', true)">
+                <span class="ssid-name" style="color: var(--accent-color);">Other...</span>
+                <span class="chevron">›</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Password Modal -->
+    <div id="modal" class="modal" onclick="closeModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-title" id="modal-ssid">Enter Password</div>
+                <div class="modal-subtitle">Enter the password for "<span id="target-ssid"></span>"</div>
+            </div>
+            <div class="modal-body">
+                <form onsubmit="event.preventDefault(); connect();">
+                    <input type="text" id="manual-ssid-input" placeholder="Network Name"
+                        style="display:none; margin-bottom: 12px;" autocapitalize="off" autocorrect="off">
+                    <input type="password" id="password-input" placeholder="Password" oninput="checkInput()">
+                    <!-- Hidden button to handle 'Go' on keyboard -->
+                    <button type="submit" style="display:none"></button>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn btn-cancel" onclick="closeModal()">Cancel</button>
+                <button class="modal-btn btn-join" id="join-btn" onclick="connect()">Join</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast">Connection in progress...</div>
+
+    <script>
+        let currentSSID = '';
+
+        // Initial Scan
+        window.onload = function () {
+            scanNetworks();
+
+            // Setup pull-to-refresh simulation via error tap
+            document.getElementById('error-msg').onclick = scanNetworks;
+        };
+
+        function scanNetworks() {
+            const list = document.getElementById('network-list');
+            const loader = document.getElementById('loading');
+            const errorMsg = document.getElementById('error-msg');
+
+            list.innerHTML = '';
+            loader.style.display = 'block';
+            errorMsg.style.display = 'none';
+
+            // Add timeout to fetch to prevent hanging
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+            fetch('/api/scan', { signal: controller.signal })
+                .then(response => {
+                    clearTimeout(timeoutId);
+                    if (!response.ok) throw new Error('Scan failed');
+                    return response.json();
+                })
+                .then(data => {
+                    loader.style.display = 'none';
+                    if (!data || data.length === 0) {
+                        errorMsg.innerHTML = "No networks found.<br><span style='color:var(--accent-color); font-weight:500;'>Tap to retry</span>";
+                        errorMsg.style.display = 'block';
+                        return;
+                    }
+
+                    // Sort by RSSI (signal strength) descending
+                    data.sort((a, b) => b.rssi - a.rssi);
+
+                    // Remove duplicates (keep strongest)
+                    const unique = [];
+                    const seen = new Set();
+                    data.forEach(net => {
+                        // Filter empty SSIDs
+                        if (!seen.has(net.ssid) && net.ssid && net.ssid.trim().length > 0) {
+                            seen.add(net.ssid);
+                            unique.push(net);
+                        }
+                    });
+
+                    unique.forEach(net => {
+                        const li = document.createElement('li');
+                        li.className = 'network-item';
+                        li.onclick = () => openModal(net.ssid);
+
+                        // Visual Signal Indicator
+                        let signalClass = 'wifi-weak';
+                        let signalBars = '•';
+                        if (net.rssi > -60) { signalClass = 'wifi-good'; signalBars = '•••'; }
+                        else if (net.rssi > -75) { signalClass = 'wifi-good'; signalBars = '••'; }
+                        else if (net.rssi > -85) { signalClass = 'wifi-fair'; signalBars = '•'; }
+
+                        li.innerHTML = `
+                        <span class="ssid-name">${net.ssid}</span>
+                        <div class="signal-icon">
+                            <span class="wifi-bars ${signalClass}">${signalBars}</span>
+                            <span class="chevron">›</span>
+                        </div>
+                    `;
+                        list.appendChild(li);
+                    });
+                })
+                .catch(err => {
+                    loader.style.display = 'none';
+                    errorMsg.innerText = "Scanning Error. Tap to retry.";
+                    errorMsg.style.display = 'block';
+                    console.error(err);
+                });
+        }
+
+        function openModal(ssid, isManual = false) {
+            const modal = document.getElementById('modal');
+            const titleSSID = document.getElementById('target-ssid');
+            const ssidInput = document.getElementById('manual-ssid-input');
+            const passInput = document.getElementById('password-input');
+
+            passInput.value = '';
+            currentSSID = ssid;
+
+            if (isManual) {
+                document.getElementById('modal-ssid').innerText = 'Join Network';
+                titleSSID.innerText = 'manually';
+                ssidInput.style.display = 'block';
+                ssidInput.value = '';
+                // Auto-focus with small delay to allow animation
+                setTimeout(() => ssidInput.focus(), 100);
+            } else {
+                document.getElementById('modal-ssid').innerText = 'Enter Password';
+                titleSSID.innerText = ssid;
+                ssidInput.style.display = 'none';
+                setTimeout(() => passInput.focus(), 100);
+            }
+
+            modal.style.display = 'flex';
+            checkInput(); // update button state
+        }
+
+        function closeModal(event) {
+            if (event && event.target !== document.getElementById('modal') && event.target.className.indexOf('btn-cancel') === -1) {
+                return;
+            }
+            document.getElementById('modal').style.display = 'none';
+        }
+
+        function checkInput() {
+            const joinBtn = document.getElementById('join-btn');
+            const manualName = document.getElementById('manual-ssid-input').value;
+            const isManual = document.getElementById('manual-ssid-input').style.display !== 'none';
+
+            if (isManual) {
+                joinBtn.disabled = (manualName.trim().length === 0);
+            } else {
+                // Always enabled for password (could be open net with no pass)
+                joinBtn.disabled = false;
+            }
+        }
+
+        function connect() {
+            const pass = document.getElementById('password-input').value;
+            const manualName = document.getElementById('manual-ssid-input').value;
+            const isManual = document.getElementById('manual-ssid-input').style.display !== 'none';
+
+            const ssidToUse = isManual ? manualName : currentSSID;
+
+            if (!ssidToUse) return;
+
+            // Hide keyboard first
+            document.activeElement.blur();
+            closeModal();
+
+            showToast("Connecting to " + ssidToUse + "...");
+
+            fetch('/api/connect', {
+                method: 'POST',
+                body: JSON.stringify({ ssid: ssidToUse, password: pass })
+            })
+                .then(res => {
+                    if (res.ok) {
+                        showToast("Success! Rebooting...");
+                        // Keep toast visible longer for success
+                    } else {
+                        showToast("Error saving credentials.");
+                    }
+                })
+                .catch(err => {
+                    showToast("Connection failed.");
+                });
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.classList.add('show');
+            // If it's the specific success message, don't auto-hide immediately to let user read while rebooting
+            if (msg.indexOf('Rebooting') === -1) {
+                setTimeout(() => toast.classList.remove('show'), 3000);
+            }
+        }
+    </script>
+</body>
+
+</html>

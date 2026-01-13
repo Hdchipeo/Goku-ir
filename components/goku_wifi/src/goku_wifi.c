@@ -7,14 +7,32 @@
 #include "freertos/event_groups.h"
 #include "freertos/task.h"
 #include "goku_led.h"
+#include "goku_wifi_portal.h"
 #include <network_provisioning/manager.h>
 #include <network_provisioning/scheme_ble.h>
 #include <string.h>
 
+#include "esp_sntp.h"
 static const char *TAG = "goku_wifi";
 static const int WIFI_CONNECTED_EVENT = BIT0;
 static EventGroupHandle_t wifi_event_group;
 static bool s_reconnect = true; // Control auto-reconnect
+static bool s_sntp_initialized = false;
+
+static void init_sntp(void) {
+  // Check if SNTP is already initialized (e.g., by RainMaker)
+  if (s_sntp_initialized || esp_sntp_enabled()) {
+    ESP_LOGI(TAG, "SNTP already running, skipping init");
+    s_sntp_initialized = true;
+    return;
+  }
+
+  ESP_LOGI(TAG, "Initializing SNTP");
+  esp_sntp_setoperatingmode(SNTP_OPMODE_POLL);
+  esp_sntp_setservername(0, "pool.ntp.org");
+  esp_sntp_init();
+  s_sntp_initialized = true;
+}
 
 /**
  * @brief Event handler to manage Wi-Fi events
@@ -43,6 +61,10 @@ static void event_handler(void *arg, esp_event_base_t event_base,
     ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
     ESP_LOGI(TAG, "Got IP:" IPSTR, IP2STR(&event->ip_info.ip));
     xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_EVENT);
+
+    // Initialize SNTP once we have internet
+    init_sntp();
+
 #if CONFIG_APP_LED_CONTROL
     app_led_set_state(APP_LED_IDLE);
 #endif
@@ -78,8 +100,35 @@ static void get_device_service_name(char *service_name, size_t max) {
 }
 
 esp_err_t app_wifi_start(void *pop_info) {
+#if CONFIG_GOKU_PLATFORM_IOS && CONFIG_IOS_WIFI_PROV_AP_ENABLE
+  // iOS: Use SoftAP provisioning with web portal
+  wifi_portal_init();
 
-  /* Initialize provisioning manager with BLE scheme */
+  if (wifi_credentials_exist()) {
+    ESP_LOGI(TAG, "WiFi credentials found, connecting to saved network");
+
+    char ssid[33] = {0};
+    char password[65] = {0};
+
+    if (wifi_credentials_load(ssid, password) == ESP_OK) {
+      wifi_config_t wifi_config = {0};
+      strlcpy((char *)wifi_config.sta.ssid, ssid, sizeof(wifi_config.sta.ssid));
+      strlcpy((char *)wifi_config.sta.password, password,
+              sizeof(wifi_config.sta.password));
+
+      ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+      ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
+      ESP_ERROR_CHECK(esp_wifi_start());
+    } else {
+      ESP_LOGE(TAG, "Failed to load credentials, starting provisioning");
+      wifi_portal_start();
+    }
+  } else {
+    ESP_LOGI(TAG, "No WiFi credentials, starting SoftAP provisioning");
+    wifi_portal_start();
+  }
+#else
+  // Android: Use BLE provisioning (existing logic)
   network_prov_mgr_config_t config = {
       .scheme = network_prov_scheme_ble,
       .scheme_event_handler = NETWORK_PROV_SCHEME_BLE_EVENT_HANDLER_FREE_BTDM};
@@ -93,12 +142,8 @@ esp_err_t app_wifi_start(void *pop_info) {
     ESP_LOGI(TAG, "Starting provisioning");
 
 #if CONFIG_APP_LED_CONTROL
-    app_led_set_state(APP_LED_WIFI_CONN); // Or Provisioning state
+    app_led_set_state(APP_LED_WIFI_CONN);
 #endif
-
-    /* What is the Proof of Possession (PoP) string? */
-    // RainMaker standard for Assistive Claiming usually involves random POP.
-    // We will use Security 1.
 
     network_prov_security_t security = NETWORK_PROV_SECURITY_1;
     const char *pop = (const char *)pop_info;
@@ -108,9 +153,6 @@ esp_err_t app_wifi_start(void *pop_info) {
 
     char service_name[12];
     get_device_service_name(service_name, sizeof(service_name));
-
-    // Set separate event handler for Provisioning specific events?
-    // We reuse system event loop.
 
     ESP_ERROR_CHECK(
         network_prov_mgr_start_provisioning(security, pop, service_name, NULL));
@@ -124,8 +166,8 @@ esp_err_t app_wifi_start(void *pop_info) {
 
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_start());
-    // esp_wifi_connect() is called by event handler on WIFI_EVENT_STA_START
   }
+#endif
 
   return ESP_OK;
 }

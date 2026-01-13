@@ -29,3 +29,9 @@ CONFIG_PTHREAD_TASK_STACK_SIZE_DEFAULT=8192
 
 # Enable OTA Rollback
 CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE=y
+
+# Allow OTA without certificate verification (for memory-constrained devices)
+# WARNING: This is insecure and should only be used for testing or trusted networks
+CONFIG_ESP_HTTPS_OTA_ALLOW_HTTP=y
+CONFIG_ESP_TLS_INSECURE=y
+CONFIG_ESP_TLS_SKIP_SERVER_CERT_VERIFY=y
